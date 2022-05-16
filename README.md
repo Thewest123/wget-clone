@@ -1,0 +1,71 @@
+# BI-PA2 Semestral - Wget Downloader
+
+## ZADÁNÍ Z PROGTESTU
+Jednoduchý downloader
+ 
+Napište program podobný nástroji wget --mirror, který na příkazové řádce z URL (HTTP) vytvoří lokální kopii. Musí podporovat:
+ 
+   - převedení všech URL tak, aby odkazovaly na správné soubory na disku
+   - prochází stránky rekurzivně (bez opakovaného stahování)
+   - umožňuje omezit hloubku rekurzivního procházení (hodnotou, omezením na podporované URL)
+ 
+Downloader navíc umožňuje upravovat ukládané html a to následujícími způsoby:
+ 
+   - Odkazy na obrázky mohou vést na původní url, nebo na obrázek uložený na disku
+   - Odkazy na stránku, která má větší hloubku, mohou vést buď na původní URL, nebo na stránku na disku, která uživateli oznámí, že stránka neexistuje
+ 
+Volitelně: Vícevláknové stahování, podpora HTTPS
+ 
+Kde lze využít polymorfismus? (doporučené)
+   - Zpracování souborů: HTML stránka (potřebuje určité úpravy), obrázek (prostě se stáhne), CSS (úpravy nepotřebuje, ale mohou tam být obrázky), ...
+   - Úprava HTML tagů: upravení tagů s obrázky, opravení odkazů, ...
+   - Styl procházení: BFS, DFS, HTML pages first (přednost HTML stránky před obrázky), ...
+ 
+ 
+## ROZŠÍŘENÍ ZADÁNÍ
+ 
+Bude se jednat o command line utilitu, která bude implementovat základní chování nástroje wget. Jako parametr bude přijímat adresu HTTP stránky, kterou chceme naklonovat. Dalšími parametry lze nástroj více konfigurovat, například:
+
+   - hloubka stahování
+   - zpracování obrázků (nechat původní URL / přepsat na lokální URL)
+   - zpracování hlubších souborů (nechat původní URL / přepsat na URL lokálníhoerror souboru)
+   - přidání hlavičkových parametrů (např. pokud bychom chtěli vložit cookie sauth-tokenem)
+   - cesta výstupního adresáře
+   - úroveň logování (verbose, info, error aj.), případně cesta k log souboru
+   - načtení konfigurace ze souboru
+
+#### Třída HttpDownloader
+   - bude využita pro samotné připojení k serveru a stažení požadovaného souboru   pomocí Http GET
+   - metoda setHeader() umožní upravit header GET požadavku (nastavit cookies či   další parametry)
+   - metoda get() stáhne soubor a uloží na disk
+ 
+#### Třída Config
+   - ukládá uživatelem specifikovaná nastavení
+   - poskytuje rozhraní pro další části programu, aby mohly získat nastavené hodnoty
+   - po spuštení programu zparsuje CLI parametry, případně načte configurační soubor (CLI parametry přepisují hodnoty ze souboru)
+ 
+#### Třída Logger
+  - uchovává nastavení o úrovni logování (nejspíše enum)
+  - poskytuje rozhraní pro různé úrovně logování
+  - ukládá logy buďto na STDOUT/STDERR či do samostatných souborů
+ 
+## Využití polymorfismu
+ 
+Polymorfismus bude využit na různé druhy stahovaných souborů. Každý zdrojový kód má jinou syntaxi a je potřeba ho jinak zpracovat (např. na převedení odkazů na lokální URL).
+ 
+#### Base třída File
+   - Uchovává svou URL (příp. cestu na disku) a aktuální hloubku
+   - virtual metoda download()
+   - vhodná na ostatní nespecifikované soubory (obrázky, textové dokumenty, binární soubory ...), které nepotřebují dále zpracovávat
+ 
+#### Potomek FileHtml
+  - Přepisuje download()
+    - Volá svoje zpracování staženého HTML souboru
+    - Přepíše URL odkazy ve staženém souboru a rekurzivně zavolá stahování dalších URL
+  - Má další svoje metody, např. na parse()
+ 
+#### Potomek FileCss
+  - Přepisuje download()
+    - Volá svoje zpracování staženého CSS souboru
+    - Provede úpravy (pokud jsou nutné) a rekurzivně zavolá stahování dalších URL
+  - Má další svoje metody, např. na parse()
