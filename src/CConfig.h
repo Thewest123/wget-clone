@@ -1,54 +1,53 @@
+#pragma once
+
 /**
  * @file CConfig.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
  */
 
-#include <stdio.h>
-
-#include "CLogger.h"
+#include <string>
+#include <map>
 
 using namespace std;
 
 class CConfig
 {
 public:
-    enum class ConfigName
+
+    struct Setting
     {
-        Depth,
-        ReplaceImageURL,
-        ReplaceDepthURL,
-        HttpHeader,
-        OutputPath,
-        LogLevel
+        Setting();
+        Setting(const string &value);
+
+        string m_Value;
+
+        // Get values
+        operator bool() const;
+        operator int() const;
+        operator string() const;
+
+        // Set values
+        Setting &operator= (bool);
+        Setting &operator= (int);
+        Setting &operator= (const string &);
     };
 
-    /**
-     * @brief Get the CConfig value
-     *
-     * @tparam T
-     * @param name
-     * @return T
-     */
-    template <class T>
-    T get(ConfigName name)
+    CConfig()
     {
-    }
+        (*this)["test"] = false;
+    };
+    
+    CConfig::Setting &operator[] (const string &);
 
-    /**
-     * @brief Parse CLI arguments to CConfig values
-     *
-     * @param argc
-     * @param argv
-     */
-    void parseArgs(int argc, char const *argv[])
-    {
-    }
+    // Singleton stuff
+    static CConfig &getInstance();
+
+    CConfig(const CConfig &)  = delete;
+    void operator=(const CConfig &) = delete;
+
 
 private:
-    size_t m_Depth = 1;
-    bool m_ReplaceImageURL = true;
-    bool m_ReplaceDepthURL = true;
-    string m_HttpHeader = "";
-    string m_OutputPath = "";
-    CLogger::LogLevel m_LogLevel = CLogger::LogLevel::Info;
+
+    map<string, Setting> m_Settings;
+
 };

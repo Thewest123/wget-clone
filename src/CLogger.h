@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * @file CLogger.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
@@ -17,52 +19,38 @@ public:
         Error
     };
 
-    CLogger() = default;
+    CLogger() = delete;
 
-    CLogger(LogLevel logLevel)
-        : m_Level(logLevel){};
+    CLogger(LogLevel logLevel);
 
-    CLogger(LogLevel logLevel, const string &filePath)
-        : m_Level(logLevel),
-          m_Type(LogType::File),
-          m_FilePath(filePath){};
+    CLogger(LogLevel logLevel, const string &filePath);
 
     /**
      * @brief Log message in VERBOSE level
      *
      * @param msg
      */
-    void logVerbose(const string &msg) const
-    {
-    }
+    void log(const LogLevel level, const string &msg) const;
 
-    /**
-     * @brief Log message in INFO level
-     *
-     * @param msg
-     */
-    void logInfo(const string &msg) const
-    {
-    }
+    // Singleton stuff
+    static void init(const LogLevel level);
+    static CLogger &getInstance();
 
-    /**
-     * @brief Log message in ERROR level
-     *
-     * @param msg
-     */
-    void logError(const string &msg) const
-    {
-    }
+    CLogger(const CLogger &)  = delete;
+    void operator=(const CLogger &) = delete;
 
 private:
+
+    static CLogger &getInstanceImpl(const LogLevel* level = nullptr);
+
     enum class LogType
     {
         Terminal,
         File
     };
 
-    LogLevel m_Level = LogLevel::Info;
-    LogType m_Type = LogType::Terminal;
+    LogLevel m_Level;
+    LogType m_Type;
     string m_FilePath;
 
     /**
@@ -70,7 +58,5 @@ private:
      *
      * @param msg
      */
-    void logToOutput(const string &msg) const
-    {
-    }
+    void logToOutput(const string &msg) const;
 };
