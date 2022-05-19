@@ -1,12 +1,13 @@
 SOURCE_DIR = src
 BUILD_DIR = build
 
-OBJS	= $(BUILD_DIR)/main.o $(BUILD_DIR)/CLogger.o $(BUILD_DIR)/CHttpDownloader.o $(BUILD_DIR)/CConfig.o $(BUILD_DIR)/CFile.o $(BUILD_DIR)/CFileHtml.o
-SOURCE	= $(SOURCE_DIR)/main.cpp $(SOURCE_DIR)/CLogger.cpp $(SOURCE_DIR)/CHttpDownloader.cpp $(SOURCE_DIR)/CConfig.cpp $(SOURCE_DIR)/CFile.cpp $(SOURCE_DIR)/CFileHtml.cpp
-HEADER	= $(SOURCE_DIR)/CConfig.h $(SOURCE_DIR)/CLogger.h $(SOURCE_DIR)/CHttpDownloader.h $(SOURCE_DIR)/CConfig.h $(SOURCE_DIR)/CFile.h $(SOURCE_DIR)/CFileHtml.h
+OBJS	= $(BUILD_DIR)/main.o $(BUILD_DIR)/CLogger.o $(BUILD_DIR)/CHttpsDownloader.o $(BUILD_DIR)/CConfig.o $(BUILD_DIR)/CFile.o $(BUILD_DIR)/CFileHtml.o
+SOURCE	= $(SOURCE_DIR)/main.cpp $(SOURCE_DIR)/CLogger.cpp $(SOURCE_DIR)/CHttpsDownloader.cpp $(SOURCE_DIR)/CConfig.cpp $(SOURCE_DIR)/CFile.cpp $(SOURCE_DIR)/CFileHtml.cpp
+HEADER	= $(SOURCE_DIR)/CConfig.h $(SOURCE_DIR)/CLogger.h $(SOURCE_DIR)/CHttpsDownloader.h $(SOURCE_DIR)/CConfig.h $(SOURCE_DIR)/CFile.h $(SOURCE_DIR)/CFileHtml.h
 OUT		= $(BUILD_DIR)/wget.out
 CC		= g++
 FLAGS	= -g -c -Wall -pedantic -std=c++17
+LFLAGS  = -lssl -lcrypto
 
 
 all: $(OBJS)
@@ -19,8 +20,8 @@ $(BUILD_DIR)/main.o: $(SOURCE_DIR)/main.cpp
 $(BUILD_DIR)/CLogger.o: $(SOURCE_DIR)/CLogger.cpp
 	$(CC) $(FLAGS) $(SOURCE_DIR)/CLogger.cpp -o $@
 
-$(BUILD_DIR)/CHttpDownloader.o: $(SOURCE_DIR)/CHttpDownloader.cpp
-	$(CC) $(FLAGS) $(SOURCE_DIR)/CHttpDownloader.cpp -o $@
+$(BUILD_DIR)/CHttpsDownloader.o: $(SOURCE_DIR)/CHttpsDownloader.cpp
+	$(CC) $(FLAGS) $(SOURCE_DIR)/CHttpsDownloader.cpp -o $@
 
 $(BUILD_DIR)/CConfig.o: $(SOURCE_DIR)/CConfig.cpp
 	$(CC) $(FLAGS) $(SOURCE_DIR)/CConfig.cpp -o $@
@@ -33,6 +34,9 @@ $(BUILD_DIR)/CFileHtml.o: $(SOURCE_DIR)/CFileHtml.cpp
 
 run: $(OUT)
 	./$(OUT)
+
+linecount:
+	wc -l $(SOURCE_DIR)/*.h $(SOURCE_DIR)/*.cpp
 
 # clean house
 clean:
