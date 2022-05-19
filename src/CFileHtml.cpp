@@ -9,7 +9,7 @@
 #include <regex>
 
 #include "CFile.h"
-#include "CHttpDownloader.h"
+#include "CHttpsDownloader.h"
 #include "CFileHtml.h"
 #include "CLogger.h"
 
@@ -60,7 +60,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
     for (auto &&i : nextUrls)
     {
-        string newLink = m_Host + m_Path + i;
+        string newLink = m_Host + "/" + m_Path + i;
         
         logger.log(CLogger::LogLevel::Verbose, newLink);
 

@@ -39,4 +39,5 @@ private:
     string m_OutputPath = "./files";
     size_t getHeaderLength(string &content) const;
     bool parseUrl(const string &url, string &host, string &resource, string &query) const;
+
 };

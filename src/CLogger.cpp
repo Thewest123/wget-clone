@@ -51,7 +51,7 @@ void CLogger::log(const CLogger::LogLevel level, const string &msg) const
     else if (level == LogLevel::Info)    levelName = "INFO";
     else if (level == LogLevel::Verbose) levelName = "VERBOSE";
 
-    logToOutput("[" + levelName + "] " + msg);
+    logToOutput("[" + levelName + "] (" + getDateTimeNow() + "): " + msg);
 }
 
 string m_FilePath;
@@ -74,4 +74,15 @@ void CLogger::logToOutput(const string &msg) const
         // todo
         return;
     }
+}
+
+string CLogger::getDateTimeNow() const
+{
+    time_t now = time(0);
+    struct tm tstruct;
+    char buf[80];
+    tstruct = *localtime(&now);
+    strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+
+    return buf;
 }

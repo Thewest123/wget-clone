@@ -7,7 +7,7 @@
 #include <iostream>
 #include <filesystem>
 
-#include "CHttpDownloader.h"
+#include "CHttpsDownloader.h"
 #include "CConfig.h"
 #include "CFile.h"
 #include "CLogger.h"
@@ -18,8 +18,8 @@ using namespace std;
 
 void CFile::download()
 {
-
     m_Content = m_HttpD->get(m_Url);
+    cout << m_Url;
 
     createPath();
 
@@ -32,7 +32,7 @@ void CFile::download()
 
 void CFile::createPath()
 {
-    const regex re("^(?:http:\\/\\/|https:\\/\\/)?((?:www\\.)?[^/]*)([^\\.?]*)(\\/[^?]*).*", regex_constants::icase);
+    const regex re("^((?:http:\\/\\/|https:\\/\\/)?(?:www\\.)?[^/]*)([^\\.?]*)(\\/[^?]*).*", regex_constants::icase);
     smatch result;
 
     auto &logger = CLogger::getInstance();

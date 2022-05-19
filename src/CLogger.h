@@ -59,4 +59,6 @@ private:
      * @param msg
      */
     void logToOutput(const string &msg) const;
+
+    string getDateTimeNow() const;
 };

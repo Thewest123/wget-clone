@@ -28,12 +28,6 @@
 using namespace std;
 
 
-unique_ptr<BIO, DeleterOf<BIO>> operator| (unique_ptr<BIO, DeleterOf<BIO>> lower, unique_ptr<BIO, DeleterOf<BIO>> upper)
-{
-    BIO_push(upper.get(), lower.release());
-    return upper;
-}
-
 CHttpsDownloader::CHttpsDownloader()
 {
 
@@ -94,7 +88,8 @@ string CHttpsDownloader::get(const string &url)
             //! throw
         }
 
-        auto ssl_bio = std::move(bio) | unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_SslContext.get(), 1));
+        auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_SslContext.get(), 1));
+        BIO_push(ssl_bio.get(), bio.release());
 
         SSL_set_tlsext_host_name(getSSL(ssl_bio.get()), host.c_str());
 
@@ -230,11 +225,38 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio)
 
     // Split and process headers
     vector<string> headers = splitHeaders(header);
-    for (const string& line : headers)
+
+    regex re_httpStatus("HTTP/\\d\\.\\d\\s+(\\d+)\\s+(.*)", regex_constants::icase);
+    smatch result;
+
+    if (regex_match(headers[0], result, re_httpStatus) == false)
     {
-        cout << "HEADER: " << line << endl;
+        cout << "ERROR: Regex match HTTP status" << endl;
+        //! throw
     }
 
+    int statusCode = stoi(result[1].str());
+    string hdr_location;
+
+    for (const string& line : headers)
+    {
+        size_t colon = line.find(':');
+
+        if (colon == string::npos)
+            continue;
+
+        string key = line.substr(0, colon);
+        string value = line.substr(colon + 2);  // +2 to skip colon and whitespace
+
+        if (key == "Location")
+            hdr_location = value;
+    }
+
+    if (statusCode >= 300)
+    {
+        cout << "MOVED to " << hdr_location << endl;
+        return get(hdr_location);
+    }
 
     // Read data if possible
     while(true)

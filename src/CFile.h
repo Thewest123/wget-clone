@@ -9,7 +9,7 @@
 #include <iostream>
 #include <filesystem>
 
-#include "CHttpDownloader.h"
+#include "CHttpsDownloader.h"
 #include "CConfig.h"
 
 using namespace std;
@@ -17,7 +17,7 @@ using namespace std;
 class CFile
 {
 public:
-    CFile(shared_ptr<CHttpDownloader> httpd, size_t depth, const string &url)
+    CFile(shared_ptr<CHttpsDownloader> httpd, size_t depth, const string &url)
         : m_HttpD(httpd),
           m_Depth(depth),
           m_Url(url){};
@@ -31,7 +31,7 @@ public:
     virtual ~CFile() = default;
 
 protected:
-    shared_ptr<CHttpDownloader> m_HttpD;
+    shared_ptr<CHttpsDownloader> m_HttpD;
     size_t m_Depth;
     string m_Url;
     string m_Host;

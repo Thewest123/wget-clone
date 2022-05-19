@@ -11,14 +11,14 @@
 #include <regex>
 
 #include "CFile.h"
-#include "CHttpDownloader.h"
+#include "CHttpsDownloader.h"
 
 using namespace std;
 
 class CFileHtml : public CFile
 {
 public:
-    CFileHtml(shared_ptr<CHttpDownloader> httpd, size_t depth, const string &url)
+    CFileHtml(shared_ptr<CHttpsDownloader> httpd, size_t depth, const string &url)
         : CFile(httpd, depth, url){};
 
     virtual ~CFileHtml() = default;
