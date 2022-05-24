@@ -18,46 +18,49 @@ using namespace std;
 
 void CFile::download()
 {
+    // Fetch the content from server
     m_Content = m_HttpD->get(m_Url);
-    cout << m_Url;
 
+    // Parse path and create folder structure
     createPath();
 
-    auto &logger = CLogger::getInstance();
-    logger.log(CLogger::LogLevel::Verbose, "ofs: " + m_OutputPath + m_Filename);
-
+    // Write content to a file in the prepared folder structure
     ofstream ofs(m_OutputPath + m_Filename, ios_base::out | ios_base::binary);
     ofs << m_Content;
 }
 
 void CFile::createPath()
 {
-    const regex re("^((?:http:\\/\\/|https:\\/\\/)?(?:www\\.)?[^/]*)([^\\.?]*)(\\/[^?]*).*", regex_constants::icase);
-    smatch result;
-
     auto &logger = CLogger::getInstance();
-    logger.log(CLogger::LogLevel::Verbose, "ofs: " + m_OutputPath + m_Filename);
 
-    if (regex_match(m_Url, result, re) != true || result.size() < 2)
+    string fullPath = m_Url.getNormFilePath();
+    logger.log(CLogger::LogLevel::Verbose, "getNormPath(): " + fullPath);
+
+    m_Filename = fullPath;
+    m_OutputPath = "./output/";
+
+    // Find position of the last slash
+    size_t filenameStart = fullPath.find_last_of('/');
+
+    // If it exists and it's not the last slash (meaning theres a filename at the end, eg. index.html)
+    if (filenameStart != string::npos && filenameStart != fullPath.length())
     {
-        logger.log(CLogger::LogLevel::Error, "Error matching path");
-        return;
+        // Get only the filename
+        m_Filename = fullPath.substr(filenameStart + 1);
+
+        // Get only the path without filename
+        m_OutputPath = "./output/" + fullPath.substr(0, filenameStart + 1);
     }
 
-    m_Host = result[1].str();
-    m_Path = result[2].str();
-    m_Filename = result[3].str();
-
+    // If there's no filename, save it as index.html
     if (m_Filename.empty() || m_Filename == "/")
-        m_Filename = "/index.html";
+        m_Filename = "index.html";
 
-    m_OutputPath = "./output" + m_Path;
-    
-    logger.log(CLogger::LogLevel::Verbose, "Path: " + m_Path);
-    logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);
-
-
+    // Create folder structure
     filesystem::create_directories(m_OutputPath);
+
+    logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
+    logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);
 
     return;
 }

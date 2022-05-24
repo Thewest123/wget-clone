@@ -12,13 +12,14 @@
 
 #include "CFile.h"
 #include "CHttpsDownloader.h"
+#include "CURLHandler.h"
 
 using namespace std;
 
 class CFileHtml : public CFile
 {
 public:
-    CFileHtml(shared_ptr<CHttpsDownloader> httpd, size_t depth, const string &url)
+    CFileHtml(shared_ptr<CHttpsDownloader> httpd, size_t depth, CURLHandler url)
         : CFile(httpd, depth, url){};
 
     virtual ~CFileHtml() = default;
@@ -36,6 +37,5 @@ private:
      * @return set<CFile>
      */
     set<shared_ptr<CFile>> parseFile();
-    bool ends_with(std::string const & value, std::string const & ending);
-
+    bool ends_with(std::string const &value, std::string const &ending);
 };

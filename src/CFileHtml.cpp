@@ -28,20 +28,19 @@ void CFileHtml::download()
 
     if ((int)m_Depth >= (int)cfg["max_depth"])
         return;
-    
+
     auto newFiles = parseFile();
-    
+
     for (auto &&i : newFiles)
     {
         i->download();
     }
-    
 }
 
-set<shared_ptr<CFile>> CFileHtml::parseFile() 
+set<shared_ptr<CFile>> CFileHtml::parseFile()
 {
     set<shared_ptr<CFile>> nextFiles;
-    
+
     // Match everything in src= and href= that doesn't start with http or https
     const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/)([^\"']*)[\"']", regex_constants::icase);
 
@@ -50,7 +49,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
     std::sregex_iterator iter(m_Content.begin(), m_Content.end(), re);
     std::sregex_iterator end;
 
-    while(iter != end)
+    while (iter != end)
     {
         nextUrls.insert((*iter)[1]);
         iter++;
@@ -60,25 +59,26 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
     for (auto &&i : nextUrls)
     {
-        string newLink = m_Host + "/" + m_Path + i;
-        
-        logger.log(CLogger::LogLevel::Verbose, newLink);
+        CURLHandler newLink(m_Url.getNormURL() + i);
+
+        logger.log(CLogger::LogLevel::Verbose, newLink.getNormURL());
 
         shared_ptr<CFile> newFile;
 
-        if (ends_with(newLink, ".html"))
+        if (ends_with(newLink.getNormURL(), ".html"))
             newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
         else
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 
         nextFiles.insert(newFile);
-    }    
+    }
 
     return nextFiles;
 }
 
-bool CFileHtml::ends_with(std::string const & value, std::string const & ending)
+bool CFileHtml::ends_with(std::string const &value, std::string const &ending)
 {
-    if (ending.size() > value.size()) return false;
+    if (ending.size() > value.size())
+        return false;
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }

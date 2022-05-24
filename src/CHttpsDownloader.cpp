@@ -19,6 +19,10 @@
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
+#include <openssl/conf.h>
+#include <openssl/engine.h>
+#include <openssl/crypto.h>
+
 #include <unistd.h> // Kvuli close() na sockfd
 #include <string.h>
 
@@ -27,27 +31,34 @@
 
 using namespace std;
 
-
 CHttpsDownloader::CHttpsDownloader()
 {
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
-    m_SslContext = unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>>(SSL_CTX_new(SSLv23_client_method());
-#else
-    m_SslContext = unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>>(SSL_CTX_new(TLS_client_method()));
 #endif
-    
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    m_Ctx = unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>>(SSL_CTX_new(SSLv23_client_method());
+#else
+    m_Ctx = unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>>(SSL_CTX_new(TLS_client_method()));
+#endif
+
+    //Add user defined certificates
+    SSL_CTX_load_verify_locations(m_Ctx.get(), NULL, "keys");
+
     // Add system preinstalled certificates
-    if (SSL_CTX_set_default_verify_paths(m_SslContext.get()) != 1)
+    if (SSL_CTX_set_default_verify_paths(m_Ctx.get()) != 1)
     {
         cout << "Error setting up trust store" << endl;
         //! throw
     }
+}
 
-    // Add user defined certificates
-    SSL_CTX_load_verify_locations(m_SslContext.get(), NULL, "keys");
+CHttpsDownloader::~CHttpsDownloader()
+{
+    // SSL_CTX_free(ctx);
 }
 
 /**
@@ -55,23 +66,21 @@ CHttpsDownloader::CHttpsDownloader()
  *
  * @param url
  */
-string CHttpsDownloader::get(const string &url)
+string CHttpsDownloader::get(const CURLHandler url)
 {
     string response = "";
 
-    bool isHttps;
-    string host;
-    string resource;
+    bool isHttps = url.isHttps();
+    string host = url.getDomain();
+    string resource = "/" + url.getNormURLPath();
 
-    if (!parseUrl(url, isHttps, host, resource))
-        cout << "ERROR: Failed parsing URL" << endl;
+    // if (!parseUrl(url, isHttps, host, resource))
+    //     cout << "ERROR: Failed parsing URL" << endl;
 
     cout << "isHttps: " << boolalpha << isHttps << endl;
     cout << "host: " << host << endl;
     cout << "resource: " << resource << endl;
 
-    
-    
     if (isHttps)
     {
         auto bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_connect((host + ":" + HTTPS_PORT).c_str()));
@@ -88,22 +97,23 @@ string CHttpsDownloader::get(const string &url)
             //! throw
         }
 
-        auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_SslContext.get(), 1));
+        auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_Ctx.get(), 1));
         BIO_push(ssl_bio.get(), bio.release());
 
         SSL_set_tlsext_host_name(getSSL(ssl_bio.get()), host.c_str());
 
-        #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
         SSL_set1_host(getSSL(ssl_bio.get()), host.c_str());
-        #endif
+#endif
 
         if (BIO_do_handshake(ssl_bio.get()) <= 0)
         {
             cout << "Error in BIO_do_handshake" << endl;
             //! throw
         }
-        
-        verifyCertificate(getSSL(ssl_bio.get()), host.c_str());
+
+        SSL *sslpointer = getSSL(ssl_bio.get());
+        verifyCertificate(sslpointer, host.c_str());
 
         sendHttpRequest(ssl_bio.get(), resource, host);
         response = receiveHttpMessage(ssl_bio.get());
@@ -131,11 +141,11 @@ string CHttpsDownloader::get(const string &url)
     return response;
 }
 
-//private
+// private
 
 bool CHttpsDownloader::parseUrl(const string &url, bool &isHttps, string &host, string &resource) const
 {
- 
+
     const regex re("(?:http://|https://)?([^/]{3,})(.*)", regex_constants::icase);
     smatch result;
 
@@ -181,8 +191,7 @@ string CHttpsDownloader::receiveData(BIO *bio)
     return "";
 }
 
-
-vector<string> CHttpsDownloader::splitHeaders(const string& header)
+vector<string> CHttpsDownloader::splitHeaders(const string &header)
 {
     vector<string> lines;
     string delimiter = "\r\n";
@@ -222,7 +231,6 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio)
     // Remove part after delimiter from header
     header = header.substr(0, headerEnd + 2);
 
-
     // Split and process headers
     vector<string> headers = splitHeaders(header);
 
@@ -238,7 +246,7 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio)
     int statusCode = stoi(result[1].str());
     string hdr_location;
 
-    for (const string& line : headers)
+    for (const string &line : headers)
     {
         size_t colon = line.find(':');
 
@@ -246,20 +254,26 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio)
             continue;
 
         string key = line.substr(0, colon);
-        string value = line.substr(colon + 2);  // +2 to skip colon and whitespace
+        string value = line.substr(colon + 2); // +2 to skip colon and whitespace
 
         if (key == "Location")
             hdr_location = value;
     }
 
-    if (statusCode >= 300)
+    if (statusCode == 301)
     {
-        cout << "MOVED to " << hdr_location << endl;
-        return get(hdr_location);
+        cout << "MOVED 301 to " << hdr_location << endl;
+        CURLHandler newUrl(hdr_location);
+        return get(newUrl);
+    }
+    else if (statusCode == 302)
+    {
+        cout << "MOVED 302 to " << hdr_location << endl;
+        return "xxx";
     }
 
     // Read data if possible
-    while(true)
+    while (true)
     {
         string newData = receiveData(bio);
 
@@ -272,13 +286,14 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio)
     return body;
 }
 
-void CHttpsDownloader::sendHttpRequest(BIO *bio, const string& resource, const string& host)
+void CHttpsDownloader::sendHttpRequest(BIO *bio, const string &resource, const string &host)
 {
     string request = "";
 
     request += "GET " + resource + " HTTP/1.0\r\n";
     request += "Host: " + host + "\r\n";
     request += "Connection: close\r\n";
+    request += "User-Agent: WGET-Project/0.1 (FIT CVUT, Jan Cerny <cernyj87@fit.cvut.cz>)\r\n";
     request += "\r\n";
 
     BIO_write(bio, request.data(), request.size());
@@ -296,7 +311,7 @@ SSL *CHttpsDownloader::getSSL(BIO *bio)
     return ssl;
 }
 
-void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string& expectedHostname)
+void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string &expectedHostname)
 {
     int error = SSL_get_verify_result(ssl);
 
@@ -315,8 +330,10 @@ void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string& expectedHo
         //! throw
     }
 
+    X509_free(cert);
+
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    if (X509_check_host(cert, expected_hostname.data(), expected_hostname.size(), 0, nullptr) != 1)
+    if (X509_check_host(cert, expectedHostname.data(), expectedHostname.size(), 0, nullptr) != 1)
     {
         cout << "ERROR: Certificate verification error: X509_check_host" << endl;
         //! throw

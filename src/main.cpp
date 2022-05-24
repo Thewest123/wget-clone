@@ -9,6 +9,7 @@
 #include "CConfig.h"
 #include "CHttpsDownloader.h"
 #include "CFileHtml.h"
+#include "CURLHandler.h"
 
 using namespace std;
 
@@ -19,19 +20,17 @@ int main(int argc, char const *argv[])
 
     CLogger &logger = CLogger::getInstance();
     logger.log(CLogger::LogLevel::Info, "Start");
-    
-    CConfig &cfg = CConfig::getInstance();    
+
+    CConfig &cfg = CConfig::getInstance();
     cfg["max_depth"] = 2;
 
     auto httpd = make_shared<CHttpsDownloader>();
 
-    string rootUrl = "https://www.jakpsatweb.cz/";
+    CURLHandler rootUrl("tenskytarou.cz");
 
     CFileHtml root(httpd, 1, rootUrl);
 
     root.download();
-
-    logger.log(CLogger::LogLevel::Info, "End");
 
     return EXIT_SUCCESS;
 }

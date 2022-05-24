@@ -11,13 +11,14 @@
 
 #include "CHttpsDownloader.h"
 #include "CConfig.h"
+#include "CURLHandler.h"
 
 using namespace std;
 
 class CFile
 {
 public:
-    CFile(shared_ptr<CHttpsDownloader> httpd, size_t depth, const string &url)
+    CFile(shared_ptr<CHttpsDownloader> httpd, size_t depth, CURLHandler url)
         : m_HttpD(httpd),
           m_Depth(depth),
           m_Url(url){};
@@ -33,10 +34,10 @@ public:
 protected:
     shared_ptr<CHttpsDownloader> m_HttpD;
     size_t m_Depth;
-    string m_Url;
-    string m_Host;
+    CURLHandler m_Url;
+    // string m_Host;
     string m_Filename;
-    string m_Path;
+    // string m_Path;
     string m_OutputPath;
     string m_Content;
 
