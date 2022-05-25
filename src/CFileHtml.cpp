@@ -24,11 +24,6 @@ void CFileHtml::download()
     auto &logger = CLogger::getInstance();
     logger.log(CLogger::LogLevel::Verbose, "HTML verze");
 
-    CConfig &cfg = CConfig::getInstance();
-
-    if ((int)m_Depth >= (int)cfg["max_depth"])
-        return;
-
     auto newFiles = parseFile();
 
     for (auto &&i : newFiles)
@@ -59,7 +54,25 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
     for (auto &&i : nextUrls)
     {
-        CURLHandler newLink(m_Url.getNormURL() + i);
+        string urlNoFilename = m_Url.getDomain();
+
+        // If next URL starts with a slash, it's relative to the root domain, no need to get previous path
+        if (!Utils::startsWith(i, "/"))
+        {
+            urlNoFilename = m_Url.getNormURL();
+
+            // Find position of the last slash
+            size_t filenameStart = urlNoFilename.find_last_of('/');
+
+            // If it exists and it's not the last slash (meaning theres a filename at the end, eg. index.html)
+            if (filenameStart != string::npos && filenameStart != urlNoFilename.length())
+            {
+                // Get only the path without filename
+                urlNoFilename = urlNoFilename.substr(0, filenameStart + 1);
+            }
+        }
+
+        CURLHandler newLink(urlNoFilename + i);
 
         logger.log(CLogger::LogLevel::Verbose, newLink.getNormURL());
 
@@ -72,7 +85,6 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
         nextFiles.insert(newFile);
     }
-
     return nextFiles;
 }
 

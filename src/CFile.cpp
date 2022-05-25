@@ -18,6 +18,11 @@ using namespace std;
 
 void CFile::download()
 {
+    auto &cfg = CConfig::getInstance();
+
+    if ((int)m_Depth > (int)cfg["depth"])
+        return;
+
     // Fetch the content from server
     m_Content = m_HttpD->get(m_Url);
 
@@ -32,12 +37,13 @@ void CFile::download()
 void CFile::createPath()
 {
     auto &logger = CLogger::getInstance();
+    auto &cfg = CConfig::getInstance();
 
     string fullPath = m_Url.getNormFilePath();
-    logger.log(CLogger::LogLevel::Verbose, "getNormPath(): " + fullPath);
+    logger.log(CLogger::LogLevel::Verbose, "getNormFilePath(): " + fullPath);
 
     m_Filename = fullPath;
-    m_OutputPath = "./output/";
+    m_OutputPath = ((string)cfg["output"]) + "/";
 
     // Find position of the last slash
     size_t filenameStart = fullPath.find_last_of('/');
@@ -49,7 +55,7 @@ void CFile::createPath()
         m_Filename = fullPath.substr(filenameStart + 1);
 
         // Get only the path without filename
-        m_OutputPath = "./output/" + fullPath.substr(0, filenameStart + 1);
+        m_OutputPath = ((string)cfg["output"]) + "/" + fullPath.substr(0, filenameStart + 1);
     }
 
     // If there's no filename, save it as index.html

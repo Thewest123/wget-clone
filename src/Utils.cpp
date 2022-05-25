@@ -3,6 +3,8 @@
 #include <string>
 #include <algorithm>
 
+#include <iostream>
+
 std::string Utils::toLowerCase(const std::string &str)
 {
     std::string strLower = str;
@@ -23,4 +25,9 @@ bool Utils::endsWith(const std::string &str, const std::string &ending)
         return false;
 
     return std::equal(ending.rbegin(), ending.rend(), str.rbegin());
+}
+
+bool Utils::startsWith(const std::string &str, const std::string &beginning)
+{
+    return str.rfind(beginning, 0) == 0;
 }

@@ -9,10 +9,14 @@
 
 using namespace std;
 
-
 CLogger &CLogger::getInstance()
 {
     return getInstanceImpl();
+}
+
+void CLogger::setLevel(const LogLevel level)
+{
+    m_Level = level;
 }
 
 void CLogger::init(LogLevel level)
@@ -20,7 +24,7 @@ void CLogger::init(LogLevel level)
     getInstanceImpl(&level);
 }
 
-CLogger& CLogger::getInstanceImpl(const CLogger::LogLevel* level)
+CLogger &CLogger::getInstanceImpl(const CLogger::LogLevel *level)
 {
     static CLogger instance(*level);
     return instance;
@@ -47,9 +51,12 @@ void CLogger::log(const CLogger::LogLevel level, const string &msg) const
 
     string levelName;
 
-    if (level == LogLevel::Error)        levelName = "ERROR";
-    else if (level == LogLevel::Info)    levelName = "INFO";
-    else if (level == LogLevel::Verbose) levelName = "VERBOSE";
+    if (level == LogLevel::Error)
+        levelName = "ERROR";
+    else if (level == LogLevel::Info)
+        levelName = "INFO";
+    else if (level == LogLevel::Verbose)
+        levelName = "VERBOSE";
 
     logToOutput("[" + levelName + "] (" + getDateTimeNow() + "): " + msg);
 }

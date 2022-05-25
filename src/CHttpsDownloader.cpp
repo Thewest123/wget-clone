@@ -28,6 +28,7 @@
 
 #include "CHttpsDownloader.h"
 #include "CLogger.h"
+#include "CConfig.h"
 
 using namespace std;
 
@@ -269,7 +270,8 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio)
     else if (statusCode == 302)
     {
         cout << "MOVED 302 to " << hdr_location << endl;
-        return "xxx";
+        CURLHandler newUrl(hdr_location);
+        return get(newUrl);
     }
 
     // Read data if possible
@@ -293,7 +295,17 @@ void CHttpsDownloader::sendHttpRequest(BIO *bio, const string &resource, const s
     request += "GET " + resource + " HTTP/1.0\r\n";
     request += "Host: " + host + "\r\n";
     request += "Connection: close\r\n";
-    request += "User-Agent: WGET-Project/0.1 (FIT CVUT, Jan Cerny <cernyj87@fit.cvut.cz>)\r\n";
+
+    auto &cfg = CConfig::getInstance();
+    string cookies = cfg["cookies"];
+    string userAgent = cfg["cookies"];
+
+    if (!cookies.empty())
+        request += "Cookies: " + cookies + "\r\n";
+
+    if (!userAgent.empty())
+        request += "User-Agent: " + userAgent + "\r\n";
+
     request += "\r\n";
 
     BIO_write(bio, request.data(), request.size());

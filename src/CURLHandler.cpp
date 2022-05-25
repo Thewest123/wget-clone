@@ -1,10 +1,5 @@
 #include "CURLHandler.h"
 
-/**
- * @brief Construct a new CURLHandler object
- *
- * @param url Base URL of the CURLHandler, can be just domain or full URL
- */
 CURLHandler::CURLHandler(const string &url)
 {
     regex re("((?:http://|https://)?[^/]*)/?(.*)");
@@ -25,11 +20,6 @@ CURLHandler::~CURLHandler()
 {
 }
 
-/**
- * @brief Sets the domain URL and deducts protocol from 'urlDomain'
- *
- * @param urlDomain Domain of the URL, eg. https://google.com/
- */
 void CURLHandler::setDomain(const string &urlDomain)
 {
     // Transform the input to all lower case
@@ -58,17 +48,17 @@ void CURLHandler::setDomain(const string &urlDomain)
     m_Domain = tmpUrl;
 }
 
-/**
- * @brief Add additional relative part of path to the existing URL
- *
- * @param path Additional relative path (eg. "next/directory/../index.html")
- */
 void CURLHandler::addPath(const string &path)
 {
+    cout << "Adding path: " << path << endl;
     string delimiter = "/";
 
+    // If path starts with /, it's relative to the base domain
+    if (Utils::startsWith(path, delimiter))
+        m_PathLevels.clear();
+
     // If the path doesn't end with trailing slash, don't add it later with normalization
-    if (Utils::endsWith(path, delimiter))
+    if (!Utils::endsWith(path, delimiter))
         m_HasTrailingSlash = false;
 
     auto start = 0U;
@@ -92,11 +82,6 @@ void CURLHandler::addPath(const string &path)
     m_PathLevels.push_back(level);
 }
 
-/**
- * @brief Returns only the normalized path without domain, with fixed path changes (eg. '../')
- *
- * @return string Normalized path only
- */
 string CURLHandler::getNormFilePath() const
 {
     vector<string> tempPath;
@@ -142,11 +127,6 @@ string CURLHandler::getNormFilePath() const
     return path.str();
 }
 
-/**
- * @brief Returns the full normalized URL with fixed path changes (eg. '../')
- *
- * @return string Normalized URL
- */
 string CURLHandler::getNormURL() const
 {
     // Build the final normalized URL
@@ -171,7 +151,7 @@ string CURLHandler::getNormURLPath() const
 {
     string path = getNormFilePath();
 
-    if (!m_HasTrailingSlash)
+    if (!m_HasTrailingSlash && !path.empty() && Utils::endsWith(path, "/"))
         path.pop_back();
 
     return path;

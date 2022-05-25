@@ -32,16 +32,22 @@ public:
      */
     void log(const LogLevel level, const string &msg) const;
 
+    /**
+     * @brief Set current log level
+     *
+     * @param level
+     */
+    void setLevel(const LogLevel level);
+
     // Singleton stuff
     static void init(const LogLevel level);
     static CLogger &getInstance();
 
-    CLogger(const CLogger &)  = delete;
+    CLogger(const CLogger &) = delete;
     void operator=(const CLogger &) = delete;
 
 private:
-
-    static CLogger &getInstanceImpl(const LogLevel* level = nullptr);
+    static CLogger &getInstanceImpl(const LogLevel *level = nullptr);
 
     enum class LogType
     {

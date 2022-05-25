@@ -12,6 +12,13 @@ int main(int argc, char const *argv[])
      cout << "---------- [STARTING TESTS] ----------\n"
           << endl;
 
+     // ============ Utils ============
+     cout << "---------- [Testing Utils] -----------" << endl;
+
+     string str = "/loremipsum/";
+     cout << "startsWith(): " << boolalpha << Utils::startsWith(str, "/") << endl;
+     cout << "endsWith(): " << boolalpha << Utils::endsWith(str, "/") << endl;
+
      // ============ CURLHandler ============
      cout << "------- [Testing CURLHandler] --------" << endl;
 
