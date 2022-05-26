@@ -31,3 +31,8 @@ bool Utils::startsWith(const std::string &str, const std::string &beginning)
 {
     return str.rfind(beginning, 0) == 0;
 }
+
+bool Utils::contains(const std::string &str, const std::string &part)
+{
+    return str.find(part) != std::string::npos;
+}

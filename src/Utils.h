@@ -32,4 +32,14 @@ namespace Utils
      * @return false In 'input' does NOT start with 'beginning'
      */
     bool startsWith(const std::string &str, const std::string &beginning);
+
+    /**
+     * @brief Returns true if 'str' contains a 'part' string
+     *
+     * @param str Input string
+     * @param part The part we're searching for
+     * @return true If 'str' contains a 'part' string
+     * @return false If 'str' does NOT contain a 'part' string
+     */
+    bool contains(const std::string &str, const std::string &part);
 }

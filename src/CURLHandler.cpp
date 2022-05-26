@@ -50,7 +50,7 @@ void CURLHandler::setDomain(const string &urlDomain)
 
 void CURLHandler::addPath(const string &path)
 {
-    cout << "Adding path: " << path << endl;
+    // cout << "Adding path: " << path << endl;
     string delimiter = "/";
 
     // If path starts with /, it's relative to the base domain
@@ -95,7 +95,7 @@ string CURLHandler::getNormFilePath() const
             if (tempPath.size() > 0)
                 tempPath.pop_back();
             else
-                cout << "CURLHandler ERROR: Too much pop backs!" << endl;
+                cout << "CURLHandler ERROR: Too much pop backs! Current: " << level << endl;
 
             continue;
         }
@@ -165,4 +165,15 @@ string CURLHandler::getDomain() const
 bool CURLHandler::isHttps() const
 {
     return m_IsHttps;
+}
+
+size_t CURLHandler::getPathDepth() const
+{
+    // If last element is a file (contains a dot)
+    if (m_PathLevels.back().find('.') != string::npos)
+    {
+        return m_PathLevels.size() - 1;
+    }
+
+    return m_PathLevels.size();
 }

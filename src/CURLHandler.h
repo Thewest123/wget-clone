@@ -72,6 +72,8 @@ public:
      */
     bool isHttps() const;
 
+    size_t getPathDepth() const;
+
 private:
     bool m_IsHttps = false;
     bool m_HasTrailingSlash = true;

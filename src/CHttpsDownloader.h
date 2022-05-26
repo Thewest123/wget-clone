@@ -68,7 +68,7 @@ private:
 
     string receiveData(BIO *bio);
     vector<string> splitHeaders(const string &header);
-    string receiveHttpMessage(BIO *bio);
+    string receiveHttpMessage(BIO *bio, const CURLHandler &currentUrl);
     void sendHttpRequest(BIO *bio, const string &resource, const string &host);
     SSL *getSSL(BIO *bio);
     void verifyCertificate(SSL *ssl, const string &expectedHostname);

@@ -117,7 +117,7 @@ string CHttpsDownloader::get(const CURLHandler url)
         verifyCertificate(sslpointer, host.c_str());
 
         sendHttpRequest(ssl_bio.get(), resource, host);
-        response = receiveHttpMessage(ssl_bio.get());
+        response = receiveHttpMessage(ssl_bio.get(), url);
     }
     else
     {
@@ -136,7 +136,7 @@ string CHttpsDownloader::get(const CURLHandler url)
         }
 
         sendHttpRequest(bio.get(), resource, host);
-        response = receiveHttpMessage(bio.get());
+        response = receiveHttpMessage(bio.get(), url);
     }
 
     return response;
@@ -212,7 +212,7 @@ vector<string> CHttpsDownloader::splitHeaders(const string &header)
     return lines;
 }
 
-string CHttpsDownloader::receiveHttpMessage(BIO *bio)
+string CHttpsDownloader::receiveHttpMessage(BIO *bio, const CURLHandler &currentUrl)
 {
     string header = receiveData(bio);
     string delimiter = "\r\n\r\n";
@@ -270,6 +270,22 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio)
     else if (statusCode == 302)
     {
         cout << "MOVED 302 to " << hdr_location << endl;
+
+        // If the URL is not full, but only relative to domain, prepend it with domain
+        if (Utils::startsWith(hdr_location, "/"))
+        {
+            stringstream ss;
+            if (currentUrl.isHttps())
+                ss << "https://";
+            else
+                ss << "http://";
+
+            ss << currentUrl.getDomain();
+            ss << hdr_location;
+
+            hdr_location = ss.str();
+        }
+
         CURLHandler newUrl(hdr_location);
         return get(newUrl);
     }
@@ -301,7 +317,7 @@ void CHttpsDownloader::sendHttpRequest(BIO *bio, const string &resource, const s
     string userAgent = cfg["cookies"];
 
     if (!cookies.empty())
-        request += "Cookies: " + cookies + "\r\n";
+        request += "Cookie: " + cookies + "\r\n";
 
     if (!userAgent.empty())
         request += "User-Agent: " + userAgent + "\r\n";

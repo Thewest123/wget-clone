@@ -27,7 +27,9 @@ public:
      * @brief Fetch the File from URL and save it to disk
      *
      */
-    virtual void download();
+    virtual bool download();
+
+    bool save();
 
     virtual ~CFile() = default;
 

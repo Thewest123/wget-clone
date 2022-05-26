@@ -17,6 +17,7 @@ CConfig::CConfig()
     (*this)["log_level"] = 1;
     (*this)["cookies"] = string("");
     (*this)["user_agent"] = string("WGET-Project/0.1 (FIT CVUT, Jan Cerny <cernyj87@fit.cvut.cz>)");
+    (*this)["advertisement"] = true;
 };
 
 bool CConfig::parseArgs(int argc, char const *argv[])
@@ -103,6 +104,12 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
             logger.log(CLogger::LogLevel::Verbose, "Config: user_agent = " + value);
             (*this)["user_agent"] = value;
+        }
+
+        else if (value == "--disable-annoying-advertisement-that-nobody-wants-to-see")
+        {
+            logger.log(CLogger::LogLevel::Verbose, "Config: advertisement = false");
+            (*this)["advertisement"] = false;
         }
 
         else

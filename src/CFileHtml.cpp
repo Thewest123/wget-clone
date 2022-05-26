@@ -17,19 +17,66 @@ using namespace std;
 
 // CFileHtml::~CFileHtml() = default;
 
-void CFileHtml::download()
+bool CFileHtml::download()
 {
-    CFile::download();
+    // If file already exists or couldn't be downloaded, don't do anything
+    if (!CFile::download())
+        return false;
 
-    auto &logger = CLogger::getInstance();
-    logger.log(CLogger::LogLevel::Verbose, "HTML verze");
+    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading HTML: " + m_Url.getNormURL() + " | (depth " + to_string(m_Depth) + ")");
+
+    prepareRootUrls();
 
     auto newFiles = parseFile();
+
+    insertAnnoyingAdvertisementThatNobodyWantsToSee();
+
+    save();
 
     for (auto &&i : newFiles)
     {
         i->download();
     }
+
+    return true;
+}
+
+void CFileHtml::insertAnnoyingAdvertisementThatNobodyWantsToSee()
+{
+    if ((bool)CConfig::getInstance()["advertisement"] == false)
+        return;
+
+    stringstream ss;
+    ss << "\n\n<!--\n";
+    ss << " This page was mirrored using Wget Clone | https://muj.link/wget \n";
+    ss << " __    __           _     ___ _                  \n";
+    ss << "/ / /\\ \\ \\__ _  ___| |_  / __\\ | ___  _ __   ___ \n";
+    ss << "\\ \\/  \\/ / _` |/ _ \\ __|/ /  | |/ _ \\| '_ \\ / _ \\\n";
+    ss << " \\  /\\  / (_| |  __/ |_/ /___| | (_) | | | |  __/\n";
+    ss << "  \\/  \\/ \\__, |\\___|\\__\\____/|_|\\___/|_| |_|\\___|\n";
+    ss << "         |___/                                   \n";
+    ss << "-->\n";
+
+    m_Content += ss.str();
+
+    //    ¯\_(ツ)_/¯
+}
+
+void CFileHtml::prepareRootUrls()
+{
+    stringstream replaceString;
+
+    replaceString << "$1\""; // src= or href=
+
+    for (size_t i = 0; i < m_Url.getPathDepth(); i++)
+    {
+        replaceString << "../";
+    }
+
+    replaceString << "$2\""; // the link itself
+
+    const regex re("(src=|href=)[\"']/([^\"']*)[\"']", regex_constants::icase);
+    m_Content = regex_replace(m_Content, re, replaceString.str());
 }
 
 set<shared_ptr<CFile>> CFileHtml::parseFile()
@@ -37,7 +84,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
     set<shared_ptr<CFile>> nextFiles;
 
     // Match everything in src= and href= that doesn't start with http or https
-    const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/)([^\"']*)[\"']", regex_constants::icase);
+    const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/)([^\"'#]*)(#?.*)[\"']", regex_constants::icase);
 
     set<string> nextUrls;
 
@@ -49,8 +96,6 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
         nextUrls.insert((*iter)[1]);
         iter++;
     }
-
-    auto &logger = CLogger::getInstance();
 
     for (auto &&i : nextUrls)
     {
@@ -74,23 +119,16 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
         CURLHandler newLink(urlNoFilename + i);
 
-        logger.log(CLogger::LogLevel::Verbose, newLink.getNormURL());
-
         shared_ptr<CFile> newFile;
 
-        if (ends_with(newLink.getNormURL(), ".html"))
+        if (Utils::endsWith(newLink.getNormURL(), ".html"))
             newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
         else
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 
         nextFiles.insert(newFile);
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + to_string(m_Depth + 1) + ")");
     }
-    return nextFiles;
-}
 
-bool CFileHtml::ends_with(std::string const &value, std::string const &ending)
-{
-    if (ending.size() > value.size())
-        return false;
-    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+    return nextFiles;
 }

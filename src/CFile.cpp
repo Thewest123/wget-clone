@@ -16,22 +16,39 @@ using namespace std;
 
 // CFile::~CFile() = default;
 
-void CFile::download()
+bool CFile::download()
 {
     auto &cfg = CConfig::getInstance();
 
     if ((int)m_Depth > (int)cfg["depth"])
-        return;
-
-    // Fetch the content from server
-    m_Content = m_HttpD->get(m_Url);
+        return false;
 
     // Parse path and create folder structure
     createPath();
 
+    if (filesystem::exists(m_OutputPath + m_Filename))
+    {
+        CLogger::getInstance().log(CLogger::LogLevel::Info, m_Filename + " already exists, skipping!");
+        return false;
+    }
+
+    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading: " + m_Url.getNormURL() + " | (depth " + to_string(m_Depth) + ")");
+
+    // Fetch the content from server
+    m_Content = m_HttpD->get(m_Url);
+
+    save();
+
+    return true;
+}
+
+bool CFile::save()
+{
     // Write content to a file in the prepared folder structure
     ofstream ofs(m_OutputPath + m_Filename, ios_base::out | ios_base::binary);
     ofs << m_Content;
+
+    return true;
 }
 
 void CFile::createPath()

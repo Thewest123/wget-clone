@@ -28,7 +28,7 @@ public:
      * @brief Fetch the File from URL and save it to disk, recursively download other files
      *
      */
-    virtual void download() override;
+    virtual bool download() override;
 
 private:
     /**
@@ -37,5 +37,7 @@ private:
      * @return set<CFile>
      */
     set<shared_ptr<CFile>> parseFile();
-    bool ends_with(std::string const &value, std::string const &ending);
+
+    void prepareRootUrls();
+    void insertAnnoyingAdvertisementThatNobodyWantsToSee();
 };
