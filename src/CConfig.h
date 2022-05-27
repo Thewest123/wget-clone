@@ -8,6 +8,8 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
 #include "CLogger.h"
 
@@ -78,4 +80,5 @@ public:
 
 private:
     map<string, Setting> m_Settings;
+    void printHelp(const string &programName);
 };

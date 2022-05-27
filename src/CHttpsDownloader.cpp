@@ -52,7 +52,7 @@ CHttpsDownloader::CHttpsDownloader()
     // Add system preinstalled certificates
     if (SSL_CTX_set_default_verify_paths(m_Ctx.get()) != 1)
     {
-        cout << "Error setting up trust store" << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't setup SSL trust store, do you have installed any certificates?");
         //! throw
     }
 }
@@ -75,12 +75,7 @@ string CHttpsDownloader::get(const CURLHandler url)
     string host = url.getDomain();
     string resource = "/" + url.getNormURLPath();
 
-    // if (!parseUrl(url, isHttps, host, resource))
-    //     cout << "ERROR: Failed parsing URL" << endl;
-
-    cout << "isHttps: " << boolalpha << isHttps << endl;
-    cout << "host: " << host << endl;
-    cout << "resource: " << resource << endl;
+    CLogger::getInstance().log(CLogger::LogLevel::Info, "Downloading " + url.getNormURL());
 
     if (isHttps)
     {
@@ -88,13 +83,14 @@ string CHttpsDownloader::get(const CURLHandler url)
 
         if (bio == nullptr)
         {
-            cout << "Error in BIO_new_connect" << endl;
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection!");
+
             //! throw
         }
 
         if (BIO_do_connect(bio.get()) <= 0)
         {
-            cout << "Error in BIO_do_connect" << endl;
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
             //! throw
         }
 
@@ -109,7 +105,7 @@ string CHttpsDownloader::get(const CURLHandler url)
 
         if (BIO_do_handshake(ssl_bio.get()) <= 0)
         {
-            cout << "Error in BIO_do_handshake" << endl;
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't make SSL handshake!");
             //! throw
         }
 
@@ -125,13 +121,14 @@ string CHttpsDownloader::get(const CURLHandler url)
 
         if (bio == nullptr)
         {
-            cout << "Error in BIO_new_connect" << endl;
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection!");
+
             //! throw
         }
 
         if (BIO_do_connect(bio.get()) <= 0)
         {
-            cout << "Error in BIO_do_connect" << endl;
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
             //! throw
         }
 
@@ -178,7 +175,7 @@ string CHttpsDownloader::receiveData(BIO *bio)
 
     if (dataLength < 0)
     {
-        cout << "ERROR Receiving data!";
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't receive any data!");
         //! throw
         return "";
     }
@@ -240,7 +237,7 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, const CURLHandler &current
 
     if (regex_match(headers[0], result, re_httpStatus) == false)
     {
-        cout << "ERROR: Regex match HTTP status" << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "The server didn't send valid HTTP response!");
         //! throw
     }
 
@@ -263,13 +260,13 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, const CURLHandler &current
 
     if (statusCode == 301)
     {
-        cout << "MOVED 301 to " << hdr_location << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "301 Moved Permanently - New location: " + hdr_location);
         CURLHandler newUrl(hdr_location);
         return get(newUrl);
     }
     else if (statusCode == 302)
     {
-        cout << "MOVED 302 to " << hdr_location << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "302 Found - New location: " + hdr_location);
 
         // If the URL is not full, but only relative to domain, prepend it with domain
         if (Utils::startsWith(hdr_location, "/"))
@@ -334,7 +331,7 @@ SSL *CHttpsDownloader::getSSL(BIO *bio)
     BIO_get_ssl(bio, &ssl);
 
     if (ssl == nullptr)
-        cout << "ERROR in getSSL()" << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't modify connection to use SSL!");
 
     return ssl;
 }
@@ -346,7 +343,7 @@ void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string &expectedHo
     if (error != X509_V_OK)
     {
         const char *message = X509_verify_cert_error_string(error);
-        cout << "ERROR: Certificate verification error: " << message << " - " << error << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Certificate verification error: " + string(message) + " - " + to_string(error));
         //! throw
     }
 
@@ -354,7 +351,7 @@ void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string &expectedHo
 
     if (cert == nullptr)
     {
-        cout << "ERROR: No certificate was presented by the server" << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "No certificate was presented by the server!");
         //! throw
     }
 
@@ -363,7 +360,7 @@ void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string &expectedHo
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (X509_check_host(cert, expectedHostname.data(), expectedHostname.size(), 0, nullptr) != 1)
     {
-        cout << "ERROR: Certificate verification error: X509_check_host" << endl;
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Certificate verification error in X509_check_host");
         //! throw
     }
 #else

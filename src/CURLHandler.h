@@ -1,5 +1,16 @@
 #pragma once
 
+/**
+ * @file CURLHandler.h
+ * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief
+ * @version 0.1
+ * @date 2022-05-27
+ *
+ * @copyright Copyright Jan Cerny (c) 2022
+ *
+ */
+
 #include <string>
 #include <vector>
 #include <sstream>

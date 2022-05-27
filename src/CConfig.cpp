@@ -20,6 +20,62 @@ CConfig::CConfig()
     (*this)["advertisement"] = true;
 };
 
+void CConfig::printHelp(const string &programName)
+{
+    const size_t paramSize = 35;
+
+    // stringstream ss;
+    cout << "\nUSAGE:\n";
+
+    cout << "\t" << programName << " <URL Address> [OPTIONS]\n\n";
+    cout << "\t"
+         << "Wget Clone to download mirror of the specified page, replacing links to local relative links.\n\n";
+
+    cout << "\nOPTIONS:\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-h, --help"
+         << "Print this help\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-o, --output <path>"
+         << "Set output path (default = ./output)\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-d, --depth <int>"
+         << "Set max recursive depth (default = 1)\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-r, --remote-images"
+         << "Don't download external images, keep the original remote link\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-e, --error-page"
+         << "Replace links to not-downloaded pages with a 404 error page\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-v, --verbose"
+         << "Print all possible logs\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-q, --quiet"
+         << "Print only errors\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-c, --cookie <cookie>"
+         << "Set Cookie header to this value\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-u, --user-agent <useragent>"
+         << "Set User-Agent header to this value\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "--disable-annoying-advertisement-that-nobody-wants-to-see\t"
+         << "Self explanatory :)\n";
+
+    cout << endl;
+}
+
 bool CConfig::parseArgs(int argc, char const *argv[])
 {
     auto &logger = CLogger::getInstance();
@@ -28,6 +84,7 @@ bool CConfig::parseArgs(int argc, char const *argv[])
     if (argc < 2)
     {
         logger.log(CLogger::LogLevel::Error, "Too few arguments!");
+        printHelp(argv[0]);
         return false;
     }
 
@@ -39,6 +96,7 @@ bool CConfig::parseArgs(int argc, char const *argv[])
         if (value == "-h" || value == "--help")
         {
             logger.log(CLogger::LogLevel::Verbose, "Config: Read Help argument");
+            printHelp(argv[0]);
             return false;
         }
 
@@ -90,7 +148,7 @@ bool CConfig::parseArgs(int argc, char const *argv[])
             logger.setLevel(CLogger::LogLevel::Error);
         }
 
-        else if (value == "-c" || value == "--cookies")
+        else if (value == "-c" || value == "--cookie")
         {
             value = argv[++i];
 

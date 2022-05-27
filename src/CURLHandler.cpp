@@ -95,7 +95,7 @@ string CURLHandler::getNormFilePath() const
             if (tempPath.size() > 0)
                 tempPath.pop_back();
             else
-                cout << "CURLHandler ERROR: Too much pop backs! Current: " << level << endl;
+                cout << "CURLHandler ERROR: Too much pop backs!" << endl;
 
             continue;
         }

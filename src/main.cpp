@@ -15,29 +15,28 @@ using namespace std;
 
 int main(int argc, char const *argv[])
 {
-
+    // Init Logger
     CLogger::init(CLogger::LogLevel::Info);
     CLogger &logger = CLogger::getInstance();
 
+    // Init Config and parse input
     CConfig &cfg = CConfig::getInstance();
     if (!cfg.parseArgs(argc, argv))
         return EXIT_FAILURE;
 
-    logger.log(CLogger::LogLevel::Info, "Start");
-
-    // cfg["url"] = "jakpsatweb.cz";
-    // cfg["depth"] = 3;
-    // cfg["output"] = (string) "./build/jakpsatweb.cz";
-
+    // Create Https downloader
     auto httpd = make_shared<CHttpsDownloader>();
 
+    // Create Root URL
     CURLHandler rootUrl(cfg["url"]);
 
+    // Create root HTML file
     CFileHtml root(httpd, 1, rootUrl);
 
+    // Download the file and recursively other linked files
     root.download();
 
-    logger.log(CLogger::LogLevel::Info, "End");
-
+    // Exit
+    logger.log(CLogger::LogLevel::Info, "Done.");
     return EXIT_SUCCESS;
 }
