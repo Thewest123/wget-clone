@@ -28,7 +28,7 @@ int main(int argc, char const *argv[])
     auto httpd = make_shared<CHttpsDownloader>();
 
     // Create Root URL
-    CURLHandler rootUrl(cfg["url"]);
+    CURLHandler rootUrl((string)cfg["url"]);
 
     // Create root HTML file
     CFileHtml root(httpd, 1, rootUrl);

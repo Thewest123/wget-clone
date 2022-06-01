@@ -55,6 +55,8 @@ CHttpsDownloader::CHttpsDownloader()
         CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't setup SSL trust store, do you have installed any certificates?");
         //! throw
     }
+
+    SSL_CTX_set_timeout(m_Ctx.get(), 10L);
 }
 
 CHttpsDownloader::~CHttpsDownloader()
@@ -67,7 +69,7 @@ CHttpsDownloader::~CHttpsDownloader()
  *
  * @param url
  */
-string CHttpsDownloader::get(const CURLHandler url)
+string CHttpsDownloader::get(CURLHandler &url)
 {
     string response = "";
 
@@ -81,18 +83,27 @@ string CHttpsDownloader::get(const CURLHandler url)
     {
         auto bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_connect((host + ":" + HTTPS_PORT).c_str()));
 
-        if (bio == nullptr)
+        if (bio.get() == nullptr)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection!");
 
             //! throw
         }
 
-        if (BIO_do_connect(bio.get()) <= 0)
+        BIO_set_nbio(bio.get(), 1);
+
+        if (BIO_do_connect_retry(bio.get(), 10, -1) != 1)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
             //! throw
+            return "Can't connect";
         }
+
+        // if (BIO_do_connect(bio.get()) <= 0)
+        // {
+        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
+        //     //! throw
+        // }
 
         auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_Ctx.get(), 1));
         BIO_push(ssl_bio.get(), bio.release());
@@ -103,11 +114,28 @@ string CHttpsDownloader::get(const CURLHandler url)
         SSL_set1_host(getSSL(ssl_bio.get()), host.c_str());
 #endif
 
-        if (BIO_do_handshake(ssl_bio.get()) <= 0)
+        int handshakeResult;
+        do
+        {
+            handshakeResult = BIO_do_handshake(ssl_bio.get());
+
+        } while (BIO_should_retry(ssl_bio.get()));
+
+        if (handshakeResult <= 0)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't make SSL handshake!");
             //! throw
         }
+        else
+        {
+            CLogger::getInstance().log(CLogger::LogLevel::Verbose, "SSL handshake success!");
+        }
+
+        // if (BIO_do_handshake(ssl_bio.get()) <= 0)
+        // {
+        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't make SSL handshake!");
+        //     //! throw
+        // }
 
         SSL *sslpointer = getSSL(ssl_bio.get());
         verifyCertificate(sslpointer, host.c_str());
@@ -119,17 +147,20 @@ string CHttpsDownloader::get(const CURLHandler url)
     {
         auto bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_connect((host + ":" + HTTP_PORT).c_str()));
 
-        if (bio == nullptr)
+        if (bio.get() == nullptr)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection!");
 
             //! throw
         }
 
-        if (BIO_do_connect(bio.get()) <= 0)
+        BIO_set_nbio(bio.get(), 1);
+
+        if (BIO_do_connect_retry(bio.get(), 10, -1) != 1)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
             //! throw
+            return "Can't connect";
         }
 
         sendHttpRequest(bio.get(), resource, host);
@@ -169,24 +200,44 @@ bool CHttpsDownloader::parseUrl(const string &url, bool &isHttps, string &host, 
 
 string CHttpsDownloader::receiveData(BIO *bio)
 {
-    char buffer[1024];
+    // char buffer[1024];
 
-    int dataLength = BIO_read(bio, buffer, sizeof(buffer));
+    // int dataLength = BIO_read(bio, buffer, sizeof(buffer));
 
-    if (dataLength < 0)
+    // if (dataLength < 0)
+    // {
+    //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't receive any data!");
+    //     //! throw
+    //     return "";
+    // }
+
+    // else if (BIO_should_retry(bio))
+    //     return receiveData(bio);
+
+    // else if (dataLength >= 0)
+    //     return string(buffer, dataLength);
+
+    // return "";
+
+    stringstream ss;
+    int dataLength;
+    do
     {
-        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't receive any data!");
-        //! throw
-        return "";
+        char buffer[1024];
+
+        dataLength = BIO_read(bio, buffer, sizeof(buffer));
+
+        if (dataLength > 0)
+            ss << string(buffer, dataLength);
+
+    } while (BIO_should_retry(bio) || dataLength > 0);
+
+    if (ss.str().length() < 1)
+    {
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Can't receive any more data!");
     }
 
-    else if (BIO_should_retry(bio))
-        return receiveData(bio);
-
-    else if (dataLength >= 0)
-        return string(buffer, dataLength);
-
-    return "";
+    return ss.str();
 }
 
 vector<string> CHttpsDownloader::splitHeaders(const string &header)
@@ -209,7 +260,7 @@ vector<string> CHttpsDownloader::splitHeaders(const string &header)
     return lines;
 }
 
-string CHttpsDownloader::receiveHttpMessage(BIO *bio, const CURLHandler &currentUrl)
+string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
 {
     string header = receiveData(bio);
     string delimiter = "\r\n\r\n";
@@ -261,8 +312,15 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, const CURLHandler &current
     if (statusCode == 301)
     {
         CLogger::getInstance().log(CLogger::LogLevel::Verbose, "301 Moved Permanently - New location: " + hdr_location);
+
         CURLHandler newUrl(hdr_location);
-        return get(newUrl);
+
+        if (currentUrl.getDomainNorm() != newUrl.getDomainNorm())
+            currentUrl = CURLHandler(hdr_location, true);
+        else
+            currentUrl = CURLHandler(hdr_location, currentUrl.isExternal());
+
+        return get(currentUrl);
     }
     else if (statusCode == 302)
     {
@@ -284,7 +342,13 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, const CURLHandler &current
         }
 
         CURLHandler newUrl(hdr_location);
-        return get(newUrl);
+
+        if (currentUrl.getDomainNorm() != newUrl.getDomainNorm())
+            currentUrl = CURLHandler(hdr_location, true);
+        else
+            currentUrl = CURLHandler(hdr_location, currentUrl.isExternal());
+
+        return get(currentUrl);
     }
 
     // Read data if possible

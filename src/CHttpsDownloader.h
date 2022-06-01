@@ -61,14 +61,14 @@ public:
      *
      * @param url
      */
-    string get(const CURLHandler url);
+    string get(CURLHandler &url);
 
 private:
     bool parseUrl(const string &url, bool &isHttps, string &host, string &resource) const;
 
     string receiveData(BIO *bio);
     vector<string> splitHeaders(const string &header);
-    string receiveHttpMessage(BIO *bio, const CURLHandler &currentUrl);
+    string receiveHttpMessage(BIO *bio, CURLHandler &currentUrl);
     void sendHttpRequest(BIO *bio, const string &resource, const string &host);
     SSL *getSSL(BIO *bio);
     void verifyCertificate(SSL *ssl, const string &expectedHostname);

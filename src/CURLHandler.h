@@ -29,7 +29,7 @@ public:
      *
      * @param url Base URL of the CURLHandler, can be just domain or full URL
      */
-    CURLHandler(const string &url);
+    CURLHandler(const string &url, bool isExternal = false);
 
     ~CURLHandler();
 
@@ -75,6 +75,8 @@ public:
      */
     string getDomain() const;
 
+    string getDomainNorm() const;
+
     /**
      * @brief Returns bool is current URL uses https protocol
      *
@@ -85,9 +87,13 @@ public:
 
     size_t getPathDepth() const;
 
+    bool isExternal() const;
+
 private:
     bool m_IsHttps = false;
     bool m_HasTrailingSlash = true;
     string m_Domain;
     vector<string> m_PathLevels;
+    bool m_IsExternal = false;
+    vector<string> getNormalizedLevels() const;
 };

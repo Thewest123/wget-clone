@@ -75,7 +75,7 @@ void CFileHtml::prepareRootUrls()
 
     replaceString << "$2\""; // the link itself
 
-    const regex re("(src=|href=)[\"']/([^\"']*)[\"']", regex_constants::icase);
+    const regex re("(srcset=|src=|href=)[\"']\\/([^\\/][^\"']*)[\"']", regex_constants::icase);
     m_Content = regex_replace(m_Content, re, replaceString.str());
 }
 
@@ -83,18 +83,26 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 {
     set<shared_ptr<CFile>> nextFiles;
 
-    // Match everything in src= and href= that doesn't start with http or https
-    const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/)([^\"'#]*)(#?.*)[\"']", regex_constants::icase);
-
     set<string> nextUrls;
 
-    std::sregex_iterator iter(m_Content.begin(), m_Content.end(), re);
-    std::sregex_iterator end;
-
-    while (iter != end)
+    try
     {
-        nextUrls.insert((*iter)[1]);
-        iter++;
+        // Match everything in src= and href= that doesn't start with http or https
+        const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|//)([^\"'#]*)(#?[^\"']*)[\"']", regex_constants::icase);
+
+        std::sregex_iterator iter(m_Content.begin(), m_Content.end(), re);
+        std::sregex_iterator end;
+
+        while (iter != end)
+        {
+            // cout << (*iter)[1] << endl;
+            nextUrls.insert((*iter)[1]);
+            iter++;
+        }
+    }
+    catch (std::regex_error &e)
+    {
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Internal error in regex");
     }
 
     for (auto &&i : nextUrls)
@@ -121,13 +129,56 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
         shared_ptr<CFile> newFile;
 
-        if (Utils::endsWith(newLink.getNormURL(), ".html"))
+        if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
             newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
         else
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 
         nextFiles.insert(newFile);
         CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + to_string(m_Depth + 1) + ")");
+    }
+
+    // ----------- External links ---------------
+
+    set<string> nextUrlsExternal;
+
+    try
+    {
+        // Match everything in src= and href= that DOES start with http or https
+        const regex re_external("(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", regex_constants::icase);
+
+        std::sregex_iterator iter_external(m_Content.begin(), m_Content.end(), re_external);
+        std::sregex_iterator end_external;
+
+        while (iter_external != end_external)
+        {
+            nextUrlsExternal.insert((*iter_external)[1]);
+            iter_external++;
+        }
+    }
+    catch (std::regex_error &e)
+    {
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Internal error in regex");
+    }
+
+    for (auto &&i : nextUrlsExternal)
+    {
+        CURLHandler newLink(i, true);
+
+        // Skip if we are referencing ourselves
+        CURLHandler mainPageUrl((string)CConfig::getInstance()["url"]);
+        if (newLink.getDomain() == mainPageUrl.getDomain())
+            continue;
+
+        shared_ptr<CFile> newFile;
+
+        if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
+            newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
+        else
+            newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
+
+        nextFiles.insert(newFile);
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next EXTERNAL file: " + newLink.getNormURL() + " | (depth " + to_string(m_Depth + 1) + ")");
     }
 
     return nextFiles;

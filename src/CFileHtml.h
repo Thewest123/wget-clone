@@ -38,6 +38,17 @@ private:
      */
     set<shared_ptr<CFile>> parseFile();
 
+    /**
+     * @brief Preproccess the Html source code - replace absolute paths with relative paths
+     *
+     * For example: src="/assets/main.js" may become src="../../assets/main.js"
+     *
+     */
     void prepareRootUrls();
+
+    /**
+     * @brief Insert ASCII art with project link to the end of Html file
+     *
+     */
     void insertAnnoyingAdvertisementThatNobodyWantsToSee();
 };

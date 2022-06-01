@@ -42,6 +42,7 @@ protected:
     // string m_Path;
     string m_OutputPath;
     string m_Content;
+    // bool m_IsExternal;
 
     void createPath();
 };

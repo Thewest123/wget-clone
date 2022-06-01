@@ -1,13 +1,14 @@
 #include "CURLHandler.h"
 
-CURLHandler::CURLHandler(const string &url)
+CURLHandler::CURLHandler(const string &url, bool isExternal)
+    : m_IsExternal(isExternal)
 {
     regex re("((?:http://|https://)?[^/]*)/?(.*)");
     smatch result;
 
     if (!regex_match(url, result, re))
     {
-        cout << "CURLHandler ERROR: Too much pop backs!" << endl;
+        cout << "CURLHandler ERROR: Failed regex!" << endl;
         //! throw
         return;
     }
@@ -94,8 +95,8 @@ string CURLHandler::getNormFilePath() const
         {
             if (tempPath.size() > 0)
                 tempPath.pop_back();
-            else
-                cout << "CURLHandler ERROR: Too much pop backs!" << endl;
+            // else
+            //     cout << "CURLHandler ERROR: Too much pop backs!" << endl;
 
             continue;
         }
@@ -125,6 +126,37 @@ string CURLHandler::getNormFilePath() const
     }
 
     return path.str();
+}
+
+vector<string> CURLHandler::getNormalizedLevels() const
+{
+    vector<string> tempPath;
+
+    // Normalize path
+    for (auto &level : m_PathLevels)
+    {
+        // Move back one level
+        if (level == "..")
+        {
+            if (tempPath.size() > 0)
+                tempPath.pop_back();
+            // else
+            //     cout << "CURLHandler ERROR: Too much pop backs!" << endl;
+
+            continue;
+        }
+
+        // Skip redundant dots or empty levels
+        else if (level == "." || level.empty())
+        {
+            continue;
+        }
+
+        // Add level to path
+        tempPath.push_back(level);
+    }
+
+    return tempPath;
 }
 
 string CURLHandler::getNormURL() const
@@ -162,18 +194,39 @@ string CURLHandler::getDomain() const
     return m_Domain;
 }
 
+string CURLHandler::getDomainNorm() const
+{
+    if (Utils::startsWith(m_Domain, "www."))
+        return m_Domain.substr(4);
+
+    return m_Domain;
+}
+
 bool CURLHandler::isHttps() const
 {
     return m_IsHttps;
 }
 
+bool CURLHandler::isExternal() const
+{
+    return m_IsExternal;
+}
+
 size_t CURLHandler::getPathDepth() const
 {
-    // If last element is a file (contains a dot)
-    if (m_PathLevels.back().find('.') != string::npos)
+    auto levels = getNormalizedLevels();
+
+    // If there is no path after domain name
+    if ((levels.size() == 1 && levels.back() == "") || levels.size() <= 0)
     {
-        return m_PathLevels.size() - 1;
+        return 0;
     }
 
-    return m_PathLevels.size();
+    // If last element is a file (contains a dot)
+    if (levels.back().find('.') != string::npos)
+    {
+        return levels.size() - 1;
+    }
+
+    return levels.size();
 }

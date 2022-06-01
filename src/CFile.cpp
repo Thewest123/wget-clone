@@ -37,6 +37,8 @@ bool CFile::download()
     // Fetch the content from server
     m_Content = m_HttpD->get(m_Url);
 
+    createPath();
+
     save();
 
     return true;
@@ -53,37 +55,75 @@ bool CFile::save()
 
 void CFile::createPath()
 {
-    auto &logger = CLogger::getInstance();
-    auto &cfg = CConfig::getInstance();
-
-    string fullPath = m_Url.getNormFilePath();
-    logger.log(CLogger::LogLevel::Verbose, "getNormFilePath(): " + fullPath);
-
-    m_Filename = fullPath;
-    m_OutputPath = ((string)cfg["output"]) + "/";
-
-    // Find position of the last slash
-    size_t filenameStart = fullPath.find_last_of('/');
-
-    // If it exists and it's not the last slash (meaning theres a filename at the end, eg. index.html)
-    if (filenameStart != string::npos && filenameStart != fullPath.length())
+    // ! FIXME: sloucit if else dohromady, duplicitni kod
+    if (!m_Url.isExternal())
     {
-        // Get only the filename
-        m_Filename = fullPath.substr(filenameStart + 1);
+        auto &logger = CLogger::getInstance();
+        auto &cfg = CConfig::getInstance();
 
-        // Get only the path without filename
-        m_OutputPath = ((string)cfg["output"]) + "/" + fullPath.substr(0, filenameStart + 1);
+        string fullPath = m_Url.getNormFilePath();
+        logger.log(CLogger::LogLevel::Verbose, "getNormFilePath(): " + fullPath);
+
+        m_Filename = fullPath;
+        m_OutputPath = ((string)cfg["output"]) + "/";
+
+        // Find position of the last slash
+        size_t filenameStart = fullPath.find_last_of('/');
+
+        // If it exists and it's not the last slash (meaning theres a filename at the end, eg. index.html)
+        if (filenameStart != string::npos && filenameStart != fullPath.length())
+        {
+            // Get only the filename
+            m_Filename = fullPath.substr(filenameStart + 1);
+
+            // Get only the path without filename
+            m_OutputPath = ((string)cfg["output"]) + "/" + fullPath.substr(0, filenameStart + 1);
+        }
+
+        // If there's no filename, save it as index.html
+        if (m_Filename.empty() || m_Filename == "/")
+            m_Filename = "index.html";
+
+        // Create folder structure
+        filesystem::create_directories(m_OutputPath);
+
+        logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
+        logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);
     }
+    else
+    {
+        auto &logger = CLogger::getInstance();
+        auto &cfg = CConfig::getInstance();
 
-    // If there's no filename, save it as index.html
-    if (m_Filename.empty() || m_Filename == "/")
-        m_Filename = "index.html";
+        string fullPath = m_Url.getDomain() + "/" + m_Url.getNormFilePath();
+        logger.log(CLogger::LogLevel::Verbose, "getNormFilePath(): " + fullPath);
 
-    // Create folder structure
-    filesystem::create_directories(m_OutputPath);
+        m_Filename = fullPath;
+        m_OutputPath = ((string)cfg["output"]) + "/external/";
 
-    logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
-    logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);
+        // Find position of the last slash
+        size_t filenameStart = fullPath.find_last_of('/');
+
+        // If it exists and it's not the last slash (meaning theres a filename at the end, eg. index.html)
+        if (filenameStart != string::npos && filenameStart != fullPath.length())
+        {
+            // Get only the filename
+            m_Filename = fullPath.substr(filenameStart + 1);
+
+            // Get only the path without filename
+            m_OutputPath = ((string)cfg["output"]) + "/external/" + fullPath.substr(0, filenameStart + 1);
+        }
+
+        // If there's no filename, save it as index.html
+        if (m_Filename.empty() || m_Filename == "/")
+            m_Filename = "index.html";
+
+        // Create folder structure
+        filesystem::create_directories(m_OutputPath);
+
+        logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
+        logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);
+    }
 
     return;
 }
