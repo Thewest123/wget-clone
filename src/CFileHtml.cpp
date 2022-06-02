@@ -79,6 +79,35 @@ void CFileHtml::prepareRootUrls()
     m_Content = regex_replace(m_Content, re, replaceString.str());
 }
 
+void CFileHtml::replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler)
+{
+    stringstream replaceString;
+
+    // Get relative path to root directory
+    for (size_t i = 0; i < m_Url.getPathDepth(); i++)
+    {
+        replaceString << "../";
+    }
+
+    string pathWithFixedFilename = linkUrlHandler.getNormFilePath();
+
+    // Remove query params (everything after '?') from filename
+    size_t filenameEndPos = string::npos;
+
+    if ((filenameEndPos = pathWithFixedFilename.find('?')) != string::npos)
+        pathWithFixedFilename = pathWithFixedFilename.substr(0, filenameEndPos);
+
+    // Get path to local external directory
+    replaceString << "external/"
+                  << linkUrlHandler.getDomain()
+                  << "/"
+                  << pathWithFixedFilename;
+
+    Utils::replaceAll(m_Content, searchString, replaceString.str());
+
+    cout << "Replaced '" << searchString << "' with '" << replaceString.str() << "'" << endl;
+}
+
 set<shared_ptr<CFile>> CFileHtml::parseFile()
 {
     set<shared_ptr<CFile>> nextFiles;
@@ -140,6 +169,10 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
     // ----------- External links ---------------
 
+    // Skip external links if desired
+    if ((bool)CConfig::getInstance()["remote"] == true)
+        return nextFiles;
+
     set<string> nextUrlsExternal;
 
     try
@@ -170,6 +203,15 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
         if (newLink.getDomain() == mainPageUrl.getDomain())
             continue;
 
+        // Skip if URL is not in limited links, if specified
+        string domainsList = (string)CConfig::getInstance()["limit"];
+
+        if (!domainsList.empty() && !Utils::contains(domainsList, newLink.getDomain()))
+        {
+            CLogger::getInstance().log(CLogger::LogLevel::Info, "Skipping link due to limit: " + newLink.getNormURL());
+            continue;
+        }
+
         shared_ptr<CFile> newFile;
 
         if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
@@ -179,6 +221,9 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
         nextFiles.insert(newFile);
         CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next EXTERNAL file: " + newLink.getNormURL() + " | (depth " + to_string(m_Depth + 1) + ")");
+
+        if ((int)m_Depth + 1 <= (int)CConfig::getInstance()["depth"])
+            replaceExternalWithLocal(i, newLink);
     }
 
     return nextFiles;

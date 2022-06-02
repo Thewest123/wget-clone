@@ -76,6 +76,12 @@ void CFile::createPath()
             // Get only the filename
             m_Filename = fullPath.substr(filenameStart + 1);
 
+            // Remove query params (everything after '?') from filename
+            size_t filenameEndPos = string::npos;
+
+            if ((filenameEndPos = m_Filename.find('?')) != string::npos)
+                m_Filename = m_Filename.substr(0, filenameEndPos);
+
             // Get only the path without filename
             m_OutputPath = ((string)cfg["output"]) + "/" + fullPath.substr(0, filenameStart + 1);
         }
@@ -109,6 +115,12 @@ void CFile::createPath()
         {
             // Get only the filename
             m_Filename = fullPath.substr(filenameStart + 1);
+
+            // Remove query params (everything after '?') from filename
+            size_t filenameEndPos = string::npos;
+
+            if ((filenameEndPos = m_Filename.find('?')) != string::npos)
+                m_Filename = m_Filename.substr(0, filenameEndPos);
 
             // Get only the path without filename
             m_OutputPath = ((string)cfg["output"]) + "/external/" + fullPath.substr(0, filenameStart + 1);
