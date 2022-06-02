@@ -42,4 +42,8 @@ namespace Utils
      * @return false If 'str' does NOT contain a 'part' string
      */
     bool contains(const std::string &str, const std::string &part);
+
+    size_t replaceAll(std::string &str, const std::string &what, const std::string &to);
+
+    std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);
 }
