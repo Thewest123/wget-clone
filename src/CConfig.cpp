@@ -4,20 +4,23 @@
  */
 
 #include "CConfig.h"
+#include "Utils.h"
 
 using namespace std;
 
 CConfig::CConfig()
 {
-    (*this)["url"] = "";
+    (*this)["url"] = string("");
     (*this)["depth"] = 1;
     (*this)["remote_images"] = false;
+    (*this)["remote"] = false;
     (*this)["error_page"] = false;
     (*this)["output"] = string("./output");
     (*this)["log_level"] = 1;
     (*this)["cookies"] = string("");
     (*this)["user_agent"] = string("WGET-Project/0.1 (FIT CVUT, Jan Cerny <cernyj87@fit.cvut.cz>)");
     (*this)["advertisement"] = true;
+    (*this)["limit"] = string("");
 };
 
 void CConfig::printHelp(const string &programName)
@@ -46,7 +49,15 @@ void CConfig::printHelp(const string &programName)
          << "Set max recursive depth (default = 1)\n";
 
     cout << "\t" << setw(paramSize) << left
-         << "-r, --remote-images"
+         << "-l, --limit <domain,domain,...>"
+         << "Limit download only to selected domains (comma separated list) (default = \"\"; downloads anything)\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-r, --remote"
+         << "Don't download any external links, keep the original remote link\n";
+
+    cout << "\t" << setw(paramSize) << left
+         << "-R, --remote-images"
          << "Don't download external images, keep the original remote link\n";
 
     cout << "\t" << setw(paramSize) << left
@@ -114,7 +125,21 @@ bool CConfig::parseArgs(int argc, char const *argv[])
             (*this)["depth"] = value;
         }
 
-        else if (value == "-r" || value == "--remote-images")
+        else if (value == "-l" || value == "--limit")
+        {
+            value = argv[++i];
+
+            logger.log(CLogger::LogLevel::Verbose, "Config: limit = " + value);
+            (*this)["limit"] = value;
+        }
+
+        else if (value == "-r" || value == "--remote")
+        {
+            logger.log(CLogger::LogLevel::Verbose, "Config: remote = true");
+            (*this)["remote"] = true;
+        }
+
+        else if (value == "-R" || value == "--remote-images")
         {
             logger.log(CLogger::LogLevel::Verbose, "Config: remote_images = true");
             (*this)["remote_images"] = true;
@@ -170,13 +195,26 @@ bool CConfig::parseArgs(int argc, char const *argv[])
             (*this)["advertisement"] = false;
         }
 
-        else
+        else if (value != "" && !Utils::startsWith(value, "-"))
         {
             logger.log(CLogger::LogLevel::Verbose, "Config: url = " + value);
             (*this)["url"] = value;
         }
+
+        else
+        {
+            logger.log(CLogger::LogLevel::Error, "Unknown argument: " + value);
+            return false;
+        }
     }
 
+    if ((string)((*this)["url"]) == "")
+    {
+        logger.log(CLogger::LogLevel::Error, "No URL provided!");
+        return false;
+    }
+
+    cout << "URL: " << ((string)((*this)["url"])) << endl;
     return true;
 }
 
