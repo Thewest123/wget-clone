@@ -4,8 +4,10 @@
  */
 
 #include "CURLHandler.h"
+#include "Utils.h"
 
-using namespace std;
+// using namespace std;
+using std::string, std::cout, std::endl, std::boolalpha;
 
 int main(int argc, char const *argv[])
 {

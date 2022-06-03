@@ -5,56 +5,38 @@
  *
  */
 
-#include <iostream>
-#include <fstream>
-#include <regex>
-#include <filesystem> // Kvuli tvorbe slozek
-
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <stdio.h>
-
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-#include <openssl/x509v3.h>
-
-#include <openssl/conf.h>
-#include <openssl/engine.h>
-#include <openssl/crypto.h>
-
-#include <unistd.h> // Kvuli close() na sockfd
-#include <string.h>
-
 #include "CHttpsDownloader.h"
 #include "CLogger.h"
 #include "CConfig.h"
+#include "Utils.h"
+#include "CURLHandler.h"
 
-using namespace std;
+// using namespace std;
+using std::unique_ptr, std::regex, std::smatch, std::regex_match, std::stringstream;
 
 CHttpsDownloader::CHttpsDownloader()
 {
-
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    m_Ctx = unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>>(SSL_CTX_new(SSLv23_client_method());
+    m_Ctx = unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>>(SSL_CTX_new(SSLv23_client_method()));
 #else
     m_Ctx = unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>>(SSL_CTX_new(TLS_client_method()));
 #endif
 
-    //Add user defined certificates
-    SSL_CTX_load_verify_locations(m_Ctx.get(), NULL, "keys");
+    // Add user defined certificates
+    string certStore = static_cast<string>(CConfig::getInstance()["cert_store"]);
+
+    if (!certStore.empty())
+        SSL_CTX_load_verify_locations(m_Ctx.get(), NULL, certStore.c_str());
 
     // Add system preinstalled certificates
     if (SSL_CTX_set_default_verify_paths(m_Ctx.get()) != 1)
     {
-        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't setup SSL trust store, do you have installed any certificates?");
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't setup SSL trust store, are any certificates installed? Use flag --cert-store to specify custom path.");
         //! throw
     }
 
@@ -84,11 +66,18 @@ string CHttpsDownloader::get(CURLHandler &url)
 
         BIO_set_nbio(bio.get(), 1);
 
-        if (BIO_do_connect_retry(bio.get(), 10, -1) != 1)
+        int connectStatus = BIO_do_connect_retry(bio.get(), 10, -1);
+        if (connectStatus == -1)
         {
-            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
             //! throw
-            return "Can't connect";
+            return "Can't connect, error";
+        }
+        else if (connectStatus == 0)
+        {
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
+            //! throw
+            return "Can't connect, timed out";
         }
 
         auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_Ctx.get(), 1));
@@ -129,18 +118,25 @@ string CHttpsDownloader::get(CURLHandler &url)
 
         if (bio.get() == nullptr)
         {
-            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection!");
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection to " + url.getNormURL() + " !");
 
             //! throw
         }
 
         BIO_set_nbio(bio.get(), 1);
 
-        if (BIO_do_connect_retry(bio.get(), 10, -1) != 1)
+        int connectStatus = BIO_do_connect_retry(bio.get(), 10, -1);
+        if (connectStatus == -1)
         {
-            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
             //! throw
-            return "Can't connect";
+            return "Can't connect, error";
+        }
+        else if (connectStatus == 0)
+        {
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
+            //! throw
+            return "Can't connect, timed out";
         }
 
         sendHttpRequest(bio.get(), resource, host);
@@ -216,7 +212,7 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
     // Split and process headers
     vector<string> headers = splitHeaders(header);
 
-    regex re_httpStatus("HTTP/\\d\\.\\d\\s+(\\d+)\\s+(.*)", regex_constants::icase);
+    regex re_httpStatus("HTTP/\\d\\.\\d\\s+(\\d+)\\s+(.*)", std::regex_constants::icase);
     smatch result;
 
     if (regex_match(headers[0], result, re_httpStatus) == false)
@@ -225,7 +221,7 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
         //! throw
     }
 
-    int statusCode = stoi(result[1].str());
+    int statusCode = std::stoi(result[1].str());
     string hdr_location;
 
     for (const string &line : headers)
@@ -340,7 +336,7 @@ void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string &expectedHo
     if (error != X509_V_OK)
     {
         const char *message = X509_verify_cert_error_string(error);
-        CLogger::getInstance().log(CLogger::LogLevel::Error, "Certificate verification error: " + string(message) + " - " + to_string(error));
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Certificate verification error: " + string(message) + " - " + std::to_string(error));
         //! throw
     }
 

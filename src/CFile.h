@@ -7,15 +7,20 @@
 
 #pragma once
 
+//#include "CHttpsDownloader.h"
+class CHttpsDownloader;
+
+#include "CURLHandler.h"
+
 #include <stdlib.h>
 #include <iostream>
 #include <filesystem>
 
-#include "CHttpsDownloader.h"
-#include "CConfig.h"
-#include "CURLHandler.h"
+#include <memory> // shared_ptr<>
+#include <string> // string
 
-using namespace std;
+// using namespace std;
+using std::string, std::shared_ptr;
 
 class CFile
 {
@@ -30,7 +35,7 @@ public:
     CFile(shared_ptr<CHttpsDownloader> httpd, size_t depth, CURLHandler url)
         : m_HttpD(httpd),
           m_Depth(depth),
-          m_Url(url){};
+          m_Url(url) {}
 
     /**
      * @brief Fetch the File from URL and save it to disk

@@ -5,11 +5,12 @@
  *
  */
 
-#include <iostream>
-
 #include "CLogger.h"
 
-using namespace std;
+#include <iostream>
+#include <string>
+
+using std::string, std::cout, std::endl;
 
 CLogger &CLogger::getInstance()
 {
@@ -34,12 +35,12 @@ CLogger &CLogger::getInstanceImpl(const CLogger::LogLevel *level)
 
 CLogger::CLogger(LogLevel logLevel)
     : m_Level(logLevel),
-      m_Type(CLogger::LogType::Terminal){};
+      m_Type(CLogger::LogType::Terminal) {}
 
 CLogger::CLogger(LogLevel logLevel, const string &filePath)
     : m_Level(logLevel),
       m_Type(CLogger::LogType::File),
-      m_FilePath(filePath){};
+      m_FilePath(filePath) {}
 
 /**
  * @brief Log message in VERBOSE level
@@ -62,8 +63,6 @@ void CLogger::log(const CLogger::LogLevel level, const string &msg) const
 
     logToOutput("[" + levelName + "] (" + getDateTimeNow() + "): " + msg);
 }
-
-string m_FilePath;
 
 /**
  * @brief Print the message to COUT or FILE

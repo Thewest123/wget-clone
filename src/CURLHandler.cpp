@@ -5,6 +5,9 @@
  */
 
 #include "CURLHandler.h"
+#include "Utils.h"
+
+using std::regex, std::smatch, std::cout, std::endl, std::stringstream;
 
 CURLHandler::CURLHandler(const string &url, bool isExternal)
     : m_IsExternal(isExternal)

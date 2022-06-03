@@ -5,36 +5,35 @@
  *
  */
 
+#include "CConfig.h"
+#include "CFile.h"
+#include "CLogger.h"
+#include "CHttpsDownloader.h"
+
 #include <stdlib.h>
 #include <iostream>
 #include <filesystem>
 
-#include "CHttpsDownloader.h"
-#include "CConfig.h"
-#include "CFile.h"
-#include "CLogger.h"
-
-using namespace std;
-
-// CFile::~CFile() = default;
+using std::string, std::ofstream;
+namespace fs = std::filesystem;
 
 bool CFile::download()
 {
     auto &cfg = CConfig::getInstance();
 
-    if ((int)m_Depth > (int)cfg["depth"])
+    if (static_cast<int>(m_Depth) > static_cast<int>(cfg["depth"]))
         return false;
 
     // Parse path and create folder structure
     createPath();
 
-    if (filesystem::exists(m_OutputPath + m_Filename))
+    if (fs::exists(m_OutputPath + m_Filename))
     {
         CLogger::getInstance().log(CLogger::LogLevel::Info, m_Filename + " already exists, skipping!");
         return false;
     }
 
-    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading: " + m_Url.getNormURL() + " | (depth " + to_string(m_Depth) + ")");
+    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
 
     // Fetch the content from server
     m_Content = m_HttpD->get(m_Url);
@@ -49,7 +48,7 @@ bool CFile::download()
 bool CFile::save()
 {
     // Write content to a file in the prepared folder structure
-    ofstream ofs(m_OutputPath + m_Filename, ios_base::out | ios_base::binary);
+    ofstream ofs(m_OutputPath + m_Filename, std::ios_base::out | std::ios_base::binary);
     ofs << m_Content;
 
     return true;
@@ -93,7 +92,7 @@ void CFile::createPath()
             m_Filename = "index.html";
 
         // Create folder structure
-        filesystem::create_directories(m_OutputPath);
+        fs::create_directories(m_OutputPath);
 
         logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
         logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);
@@ -107,7 +106,7 @@ void CFile::createPath()
         logger.log(CLogger::LogLevel::Verbose, "getNormFilePath(): " + fullPath);
 
         m_Filename = fullPath;
-        m_OutputPath = ((string)cfg["output"]) + "/external/";
+        m_OutputPath = ((string)cfg["output"]) + "/__external/";
 
         // Find position of the last slash
         size_t filenameStart = fullPath.find_last_of('/');
@@ -125,7 +124,7 @@ void CFile::createPath()
                 m_Filename = m_Filename.substr(0, filenameEndPos);
 
             // Get only the path without filename
-            m_OutputPath = ((string)cfg["output"]) + "/external/" + fullPath.substr(0, filenameStart + 1);
+            m_OutputPath = ((string)cfg["output"]) + "/__external/" + fullPath.substr(0, filenameStart + 1);
         }
 
         // If there's no filename, save it as index.html
@@ -133,7 +132,7 @@ void CFile::createPath()
             m_Filename = "index.html";
 
         // Create folder structure
-        filesystem::create_directories(m_OutputPath);
+        fs::create_directories(m_OutputPath);
 
         logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
         logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);

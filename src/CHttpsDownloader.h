@@ -7,10 +7,8 @@
 
 #pragma once
 
-#include <iostream>
-#include <fstream>
-#include <regex>
-#include <filesystem> // Kvuli tvorbe slozek
+//#include "CURLHandler.h"
+class CURLHandler;
 
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -18,18 +16,27 @@
 #include <netdb.h>
 #include <stdio.h>
 
-#include <unistd.h> // Kvuli close() na sockfd
-#include <string.h>
-
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
-#include "CLogger.h"
-#include "CURLHandler.h"
+#include <openssl/conf.h>
+#include <openssl/engine.h>
+#include <openssl/crypto.h>
 
-using namespace std;
+#include <unistd.h> // Kvuli close() na sockfd
+#include <string.h>
+
+#include <iostream>
+#include <fstream>
+#include <regex>
+#include <filesystem> // Kvuli tvorbe slozek
+#include <memory>     // unique_ptr<>
+#include <string>
+#include <vector>
+
+using std::string, std::vector, std::unique_ptr;
 
 // OpenSSL handling inspired and studied from 5 part blog post
 // available on https://quuxplusone.github.io/blog/2020/01/24/openssl-part-1/
@@ -55,7 +62,7 @@ class CHttpsDownloader
 {
 public:
     CHttpsDownloader();
-    ~CHttpsDownloader();
+    //~CHttpsDownloader();
 
     /**
      * @brief Makes GET request to the URL and returns content

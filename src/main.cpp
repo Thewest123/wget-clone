@@ -3,15 +3,16 @@
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
  */
 
-#include <stdlib.h>
-
 #include "CLogger.h"
 #include "CConfig.h"
 #include "CHttpsDownloader.h"
 #include "CFileHtml.h"
 #include "CURLHandler.h"
 
-using namespace std;
+#include <stdlib.h>
+
+// using namespace std;
+using std::string, std::make_shared;
 
 int main(int argc, char const *argv[])
 {

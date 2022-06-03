@@ -12,9 +12,9 @@
 #include <algorithm> // transform
 #include <regex>
 #include <iostream>
-#include "Utils.h"
 
-using namespace std;
+// using namespace std;
+using std::string, std::vector;
 
 class CURLHandler
 {

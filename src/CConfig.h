@@ -13,9 +13,7 @@
 #include <sstream>
 #include <iomanip>
 
-#include "CLogger.h"
-
-using namespace std;
+using std::string, std::map;
 
 class CConfig
 {
@@ -88,5 +86,16 @@ private:
      *
      * @param programName
      */
-    void printHelp(const string &programName);
+    void
+    printHelp(const string &programName) const;
+
+    /**
+     * @brief Formats the option to two columns for arguments and explanatory help
+     *
+     * @param paramSize First column size
+     * @param args Arguments
+     * @param helpText Explanatory help text
+     * @return string Formatted string
+     */
+    string formatOption(size_t paramSize, const string &args, const string &helpText) const;
 };

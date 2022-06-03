@@ -7,8 +7,12 @@
 
 #include "CConfig.h"
 #include "Utils.h"
+#include "CLogger.h"
 
-using namespace std;
+#include <utility> // pair<>
+
+// using namespace std;
+using std::string, std::stringstream, std::cout, std::endl, std::pair;
 
 CConfig::CConfig()
 {
@@ -23,13 +27,27 @@ CConfig::CConfig()
     (*this)["user_agent"] = string("WGET-Project/0.1 (FIT CVUT, Jan Cerny <cernyj87@fit.cvut.cz>)");
     (*this)["advertisement"] = true;
     (*this)["limit"] = string("");
+    (*this)["cert_store"] = string("");
 };
 
-void CConfig::printHelp(const string &programName)
+string CConfig::formatOption(size_t paramSize, const string &args, const string &helpText) const
+{
+    stringstream ss;
+
+    ss << "\t" << std::setw(paramSize) << std::left
+       << args
+       << "\t"
+       << helpText
+       << "\n";
+
+    return ss.str();
+}
+
+void CConfig::printHelp(const string &programName) const
 {
     const size_t paramSize = 35;
 
-    // stringstream ss;
+    stringstream ss;
     cout << "\nUSAGE:\n";
 
     cout << "\t" << programName << " <URL Address> [OPTIONS]\n\n";
@@ -38,53 +56,57 @@ void CConfig::printHelp(const string &programName)
 
     cout << "\nOPTIONS:\n";
 
-    cout << "\t" << setw(paramSize) << left
-         << "-h, --help"
-         << "Print this help\n";
+    cout << formatOption(paramSize,
+                         "-h, --help",
+                         "Print this help");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-o, --output <path>"
-         << "Set output path (default = ./output)\n";
+    cout << formatOption(paramSize,
+                         "-o, --output <path>",
+                         "Set output path (default = ./output)");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-d, --depth <int>"
-         << "Set max recursive depth (default = 1)\n";
+    cout << formatOption(paramSize,
+                         "-d, --depth <int>",
+                         "Set max recursive depth (default = 1)");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-l, --limit <domain,domain,...>"
-         << "Limit download only to selected domains (comma separated list) (default = \"\"; downloads anything)\n";
+    cout << formatOption(paramSize,
+                         "-l, --limit <domain,domain,...>",
+                         "Limit download only to selected domains (comma separated list) (default = \"\"; downloads anything)");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-r, --remote"
-         << "Don't download any external links, keep the original remote link\n";
+    cout << formatOption(paramSize,
+                         "-r, --remote",
+                         "Don't download any external links, keep the original remote link");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-R, --remote-images"
-         << "Don't download external images, keep the original remote link\n";
+    cout << formatOption(paramSize,
+                         "-R, --remote-images",
+                         "Don't download external images, keep the original remote link");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-e, --error-page"
-         << "Replace links to not-downloaded pages with a 404 error page\n";
+    cout << formatOption(paramSize,
+                         "-e, --error-page",
+                         "Replace links to not-downloaded pages with a 404 error page");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-v, --verbose"
-         << "Print all possible logs\n";
+    cout << formatOption(paramSize,
+                         "-v, --verbose",
+                         "Print all possible logs");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-q, --quiet"
-         << "Print only errors\n";
+    cout << formatOption(paramSize,
+                         "-q, --quiet",
+                         "Print only errors");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-c, --cookie <cookie>"
-         << "Set Cookie header to this value\n";
+    cout << formatOption(paramSize,
+                         "-c, --cookie <cookie>",
+                         "Set Cookie header to this value");
 
-    cout << "\t" << setw(paramSize) << left
-         << "-u, --user-agent <useragent>"
-         << "Set User-Agent header to this value\n";
+    cout << formatOption(paramSize,
+                         "-u, --user-agent <useragent>",
+                         "Set User-Agent header to this value");
 
-    cout << "\t" << setw(paramSize) << left
-         << "--disable-annoying-advertisement-that-nobody-wants-to-see\t"
-         << "Self explanatory :)\n";
+    cout << formatOption(paramSize,
+                         "--cert-store <path>",
+                         "Path to user defined certificate keys store (default = \"\"; uses system store)");
+
+    cout << formatOption(paramSize,
+                         "--disable-annoying-advertisement-that-nobody-wants-to-see",
+                         "Self explanatory :)");
 
     cout << endl;
 }
@@ -191,6 +213,14 @@ bool CConfig::parseArgs(int argc, char const *argv[])
             (*this)["user_agent"] = value;
         }
 
+        else if (value == "--cert-store")
+        {
+            value = argv[++i];
+
+            logger.log(CLogger::LogLevel::Verbose, "Config: cert_store = " + value);
+            (*this)["cert_store"] = value;
+        }
+
         else if (value == "--disable-annoying-advertisement-that-nobody-wants-to-see")
         {
             logger.log(CLogger::LogLevel::Verbose, "Config: advertisement = false");
@@ -240,20 +270,20 @@ CConfig::Setting &CConfig::operator[](const string &key)
 CConfig::Setting::Setting() = default;
 
 CConfig::Setting::Setting(const string &value)
-    : m_Value(value){};
+    : m_Value(value) {}
 
 // Get values
-CConfig::Setting::operator bool(void) const
+CConfig::Setting::operator bool() const
 {
     return (m_Value == "true") ? true : false;
 }
 
-CConfig::Setting::operator int(void) const
+CConfig::Setting::operator int() const
 {
     return stoi(m_Value);
 }
 
-CConfig::Setting::operator string(void) const
+CConfig::Setting::operator string() const
 {
     return m_Value;
 }
@@ -267,7 +297,7 @@ CConfig::Setting &CConfig::Setting::operator=(bool value)
 
 CConfig::Setting &CConfig::Setting::operator=(int value)
 {
-    m_Value = to_string(value);
+    m_Value = std::to_string(value);
     return *this;
 }
 

@@ -3,26 +3,30 @@
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
  */
 
-#include <stdlib.h>
-#include <iostream>
-#include <set>
+#pragma once
 
 #include "CFile.h"
-#include "CHttpsDownloader.h"
 
-using namespace std;
+#include <stdlib.h>
+
+#include <iostream>
+#include <string>
+#include <set>
+
+// using namespace std;
+using std::string, std::set;
 
 class CFileCss : CFile
 {
 public:
-    CFileCss(size_t depth, const string &url)
-        : CFile(depth, url){};
+    CFileCss(shared_ptr<CHttpsDownloader> httpd, size_t depth, CURLHandler url)
+        : CFile(httpd, depth, url) {}
 
     /**
      * @brief Fetch the File from URL and save it to disk, recursively download other files
      *
      */
-    virtual void download() override
+    virtual bool download() override
     {
     }
 

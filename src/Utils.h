@@ -9,6 +9,7 @@
 
 #include <string>
 #include <algorithm>
+#include <vector>
 
 namespace Utils
 {
@@ -68,4 +69,5 @@ namespace Utils
      * @return std::vector<std::string> Vector containing splitted strings
      */
     std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);
-}
+
+} // namespace Utils

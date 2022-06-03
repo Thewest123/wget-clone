@@ -10,12 +10,16 @@
 #include <set>
 #include <regex>
 
-#include "CFile.h"
-#include "CHttpsDownloader.h"
+#include <memory> // shared_ptr<>
+#include <string> // string
+
 #include "CFileHtml.h"
 #include "CLogger.h"
+#include "CConfig.h"
+#include "Utils.h"
 
-using namespace std;
+// using namespace std;
+using std::string, std::stringstream, std::regex, std::regex_replace, std::set, std::cout, std::endl, std::make_shared;
 
 // CFileHtml::~CFileHtml() = default;
 
@@ -25,7 +29,7 @@ bool CFileHtml::download()
     if (!CFile::download())
         return false;
 
-    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading HTML: " + m_Url.getNormURL() + " | (depth " + to_string(m_Depth) + ")");
+    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading HTML: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
 
     prepareRootUrls();
 
@@ -45,7 +49,7 @@ bool CFileHtml::download()
 
 void CFileHtml::insertAnnoyingAdvertisementThatNobodyWantsToSee()
 {
-    if ((bool)CConfig::getInstance()["advertisement"] == false)
+    if (static_cast<bool>(CConfig::getInstance()["advertisement"]) == false)
         return;
 
     stringstream ss;
@@ -77,7 +81,7 @@ void CFileHtml::prepareRootUrls()
 
     replaceString << "$2\""; // the link itself
 
-    const regex re("(srcset=|src=|href=)[\"']\\/([^\\/][^\"']*)[\"']", regex_constants::icase);
+    const regex re("(srcset=|src=|href=)[\"']\\/([^\\/][^\"']*)[\"']", std::regex_constants::icase);
     m_Content = regex_replace(m_Content, re, replaceString.str());
 }
 
@@ -100,7 +104,7 @@ void CFileHtml::replaceExternalWithLocal(const string &searchString, const CURLH
         pathWithFixedFilename = pathWithFixedFilename.substr(0, filenameEndPos);
 
     // Get path to local external directory
-    replaceString << "external/"
+    replaceString << "__external/"
                   << linkUrlHandler.getDomain()
                   << "/"
                   << pathWithFixedFilename;
@@ -119,7 +123,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
     try
     {
         // Match everything in src= and href= that doesn't start with http or https
-        const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|//)([^\"'#]*)(#?[^\"']*)[\"']", regex_constants::icase);
+        const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|//)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
 
         std::sregex_iterator iter(m_Content.begin(), m_Content.end(), re);
         std::sregex_iterator end;
@@ -166,13 +170,13 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 
         nextFiles.insert(newFile);
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + to_string(m_Depth + 1) + ")");
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth + 1) + ")");
     }
 
     // ----------- External links ---------------
 
     // Skip external links if desired
-    if ((bool)CConfig::getInstance()["remote"] == true)
+    if (static_cast<bool>(CConfig::getInstance()["remote"]) == true)
         return nextFiles;
 
     set<string> nextUrlsExternal;
@@ -180,7 +184,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
     try
     {
         // Match everything in src= and href= that DOES start with http or https
-        const regex re_external("(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", regex_constants::icase);
+        const regex re_external("(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
 
         std::sregex_iterator iter_external(m_Content.begin(), m_Content.end(), re_external);
         std::sregex_iterator end_external;
@@ -201,12 +205,12 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
         CURLHandler newLink(i, true);
 
         // Skip if we are referencing ourselves
-        CURLHandler mainPageUrl((string)CConfig::getInstance()["url"]);
+        CURLHandler mainPageUrl(static_cast<string>(CConfig::getInstance()["url"]));
         if (newLink.getDomain() == mainPageUrl.getDomain())
             continue;
 
         // Skip if URL is not in limited links, if specified
-        string domainsList = (string)CConfig::getInstance()["limit"];
+        string domainsList = static_cast<string>(CConfig::getInstance()["limit"]);
 
         if (!domainsList.empty() && !Utils::contains(domainsList, newLink.getDomain()))
         {
@@ -222,9 +226,9 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 
         nextFiles.insert(newFile);
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next EXTERNAL file: " + newLink.getNormURL() + " | (depth " + to_string(m_Depth + 1) + ")");
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next EXTERNAL file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth + 1) + ")");
 
-        if ((int)m_Depth + 1 <= (int)CConfig::getInstance()["depth"])
+        if (static_cast<int>(m_Depth) + 1 <= static_cast<int>(CConfig::getInstance()["depth"]))
             replaceExternalWithLocal(i, newLink);
     }
 

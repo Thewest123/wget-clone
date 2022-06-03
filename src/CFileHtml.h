@@ -7,16 +7,17 @@
 
 #pragma once
 
+#include "CFile.h"
+#include "CURLHandler.h"
+
 #include <stdlib.h>
 #include <iostream>
 #include <set>
 #include <regex>
+#include <memory> // shared_ptr<>
+#include <string>
 
-#include "CFile.h"
-#include "CHttpsDownloader.h"
-#include "CURLHandler.h"
-
-using namespace std;
+using std::set, std::shared_ptr, std::string;
 
 class CFileHtml : public CFile
 {
@@ -29,7 +30,7 @@ public:
      * @param url URLHandler of this file
      */
     CFileHtml(shared_ptr<CHttpsDownloader> httpd, size_t depth, CURLHandler url)
-        : CFile(httpd, depth, url){};
+        : CFile(httpd, depth, url) {}
 
     /**
      * @brief Destroy the CFileHtml object
@@ -60,7 +61,7 @@ private:
     void prepareRootUrls();
 
     /**
-     * @brief Replace external link like "https://google.com/index.html" with relative local link like "../../external/google.com/index.html"
+     * @brief Replace external link like "https://google.com/index.html" with relative local link like "../../__external/google.com/index.html"
      *
      */
     void replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler);
