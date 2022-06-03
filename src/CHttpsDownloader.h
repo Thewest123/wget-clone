@@ -1,9 +1,11 @@
-#pragma once
-
 /**
- * @file CHttpDownloader.h
+ * @file CHttpsDownloader.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Class that interacts through sockets with web server, makes SSL handshake and validates certificates, downloads content and parses headers
+ *
  */
+
+#pragma once
 
 #include <iostream>
 #include <fstream>
@@ -31,7 +33,7 @@ using namespace std;
 
 // OpenSSL handling inspired and studied from 5 part blog post
 // available on https://quuxplusone.github.io/blog/2020/01/24/openssl-part-1/
-// but thoroughly modified to use STL functions and types instead of C functions, and to fix memory leaks
+// but thoroughly modified to use STL functions and types instead of C functions, to fix memory leaks, and rewritten to use non-blocking sockets
 
 template <class T>
 struct DeleterOf;
@@ -54,25 +56,72 @@ class CHttpsDownloader
 public:
     CHttpsDownloader();
     ~CHttpsDownloader();
-    void setHeader(const string &header);
 
     /**
-     * @brief Make GET request to the URL and save it to file
+     * @brief Makes GET request to the URL and returns content
      *
-     * @param url
+     * @param url CURLHandler url of the remote file
+     * @return string Content of the downloaded file
      */
     string get(CURLHandler &url);
 
 private:
-    bool parseUrl(const string &url, bool &isHttps, string &host, string &resource) const;
-
+    /**
+     * @brief Receives data through socket using BIO, retries the connection if appropriate
+     *
+     * @param bio
+     * @return string
+     */
     string receiveData(BIO *bio);
+
+    /**
+     * @brief Splits the header by each line
+     *
+     * @param header
+     * @return vector<string>
+     */
     vector<string> splitHeaders(const string &header);
+
+    /**
+     * @brief Gets data from BIO, validates response, parses headers
+     *
+     * Calls another 'get' if necessary (HTTP 301 Moved, etc.)
+     *
+     * @param bio
+     * @param currentUrl
+     * @return string
+     */
     string receiveHttpMessage(BIO *bio, CURLHandler &currentUrl);
+
+    /**
+     * @brief Sends the HTTP/HTTPS request using provided BIO
+     *
+     * @param bio Pointer to BIO object
+     * @param resource Required remote resource (eg. '/file/index.html')
+     * @param host Host of the resource (eg. 'google.com')
+     */
     void sendHttpRequest(BIO *bio, const string &resource, const string &host);
+
+    /**
+     * @brief Transforms the provided BIO to use SSL
+     *
+     * @param bio Pointer to BIO object
+     * @return SSL*
+     */
     SSL *getSSL(BIO *bio);
+
+    /**
+     * @brief Verifies validity of the SSL certificate for provided hostname
+     *
+     * @param ssl Pointer to the SSL certificate
+     * @param expectedHostname Hostname for verification
+     */
     void verifyCertificate(SSL *ssl, const string &expectedHostname);
 
+    /**
+     * @brief Pointer to the SSL context
+     *
+     */
     unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>> m_Ctx;
 
     const string HTTP_PORT = "80";

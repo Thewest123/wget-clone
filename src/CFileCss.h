@@ -1,5 +1,5 @@
 /**
- * @file CFile.h
+ * @file CFileCss.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
  */
 
@@ -8,7 +8,7 @@
 #include <set>
 
 #include "CFile.h"
-#include "CHttpDownloader.h"
+#include "CHttpsDownloader.h"
 
 using namespace std;
 

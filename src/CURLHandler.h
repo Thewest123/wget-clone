@@ -1,15 +1,10 @@
-#pragma once
-
 /**
  * @file CURLHandler.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief
- * @version 0.1
- * @date 2022-05-27
- *
- * @copyright Copyright Jan Cerny (c) 2022
- *
+ * @brief URL Handler to parse various URLs, append relative paths to existings URLs, and to provide normalized URLs and file paths
  */
+
+#pragma once
 
 #include <string>
 #include <vector>
@@ -31,6 +26,10 @@ public:
      */
     CURLHandler(const string &url, bool isExternal = false);
 
+    /**
+     * @brief Destroy the CURLHandler object
+     *
+     */
     ~CURLHandler();
 
     /**
@@ -75,6 +74,11 @@ public:
      */
     string getDomain() const;
 
+    /**
+     * @brief Get the Domain normalized (remove www. if present)
+     *
+     * @return string Normalized Domain
+     */
     string getDomainNorm() const;
 
     /**
@@ -85,8 +89,19 @@ public:
      */
     bool isHttps() const;
 
+    /**
+     * @brief Get depth of the current URL based on m_PathLevels
+     *
+     * @return size_t
+     */
     size_t getPathDepth() const;
 
+    /**
+     * @brief Returns bool if the current URL is marked as an external
+     *
+     * @return true Is external
+     * @return false Is NOT external
+     */
     bool isExternal() const;
 
 private:
@@ -95,5 +110,11 @@ private:
     string m_Domain;
     vector<string> m_PathLevels;
     bool m_IsExternal = false;
+
+    /**
+     * @brief Returns m_PathLevels normalized, eg. won't include '../' etc.
+     *
+     * @return vector<string> Normalized m_PathLevels
+     */
     vector<string> getNormalizedLevels() const;
 };

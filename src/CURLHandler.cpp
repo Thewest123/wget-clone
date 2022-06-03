@@ -1,3 +1,9 @@
+/**
+ * @file CURLHandler.cpp
+ * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief URL Handler to parse various URLs, append relative paths to existings URLs, and to provide normalized URLs and file paths
+ */
+
 #include "CURLHandler.h"
 
 CURLHandler::CURLHandler(const string &url, bool isExternal)

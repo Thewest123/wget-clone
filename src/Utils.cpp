@@ -1,3 +1,10 @@
+/**
+ * @file Utils.h
+ * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Namespace "Utils" containing various functions that were repeatedly used, mainly to simplify working with strings
+ *
+ */
+
 #include "Utils.h"
 
 #include <string>

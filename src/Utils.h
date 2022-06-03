@@ -1,3 +1,10 @@
+/**
+ * @file Utils.h
+ * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Namespace "Utils" containing various functions that were repeatedly used, mainly to simplify working with strings
+ *
+ */
+
 #pragma once
 
 #include <string>
@@ -43,7 +50,22 @@ namespace Utils
      */
     bool contains(const std::string &str, const std::string &part);
 
+    /**
+     * @brief Replaces all occurences of 'what' with 'to' in string 'str'
+     *
+     * @param str Main string with content to replace
+     * @param what String to find
+     * @param to String to replace with
+     * @return size_t Number of replaced occurences
+     */
     size_t replaceAll(std::string &str, const std::string &what, const std::string &to);
 
+    /**
+     * @brief Splits string by 'delimiter' and returns vector of splitted strings
+     *
+     * @param str Main string to split
+     * @param delimiter How to split (can be char or string)
+     * @return std::vector<std::string> Vector containing splitted strings
+     */
     std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);
 }

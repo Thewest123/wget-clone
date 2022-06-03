@@ -1,6 +1,8 @@
 /**
  * @file CLogger.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Logger singleton class that provides various logging levels and basic interface to log messages to output or log file
+ *
  */
 
 #include <iostream>

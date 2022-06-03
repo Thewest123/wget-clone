@@ -1,9 +1,11 @@
-#pragma once
-
 /**
  * @file CConfig.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Config singleton class to parse, store, and provide config values to other parts of the program
+ *
  */
+
+#pragma once
 
 #include <string>
 #include <map>
@@ -80,5 +82,11 @@ public:
 
 private:
     map<string, Setting> m_Settings;
+
+    /**
+     * @brief Prints basic usage and all available arguments
+     *
+     * @param programName
+     */
     void printHelp(const string &programName);
 };

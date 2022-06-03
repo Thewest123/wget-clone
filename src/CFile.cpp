@@ -1,6 +1,8 @@
 /**
- * @file CFile.h
+ * @file CFile.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Polymorphic base class to download and store file content, and save it to disk
+ *
  */
 
 #include <stdlib.h>

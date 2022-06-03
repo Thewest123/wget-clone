@@ -1,9 +1,11 @@
-#pragma once
-
 /**
  * @file CFile.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Polymorphic base class to download and store file content, and save it to disk
+ *
  */
+
+#pragma once
 
 #include <stdlib.h>
 #include <iostream>
@@ -18,6 +20,13 @@ using namespace std;
 class CFile
 {
 public:
+    /**
+     * @brief Construct a new CFile object
+     *
+     * @param httpd Pointer to the HttpsDownloader
+     * @param depth Current depth of this file
+     * @param url URLHandler of this file
+     */
     CFile(shared_ptr<CHttpsDownloader> httpd, size_t depth, CURLHandler url)
         : m_HttpD(httpd),
           m_Depth(depth),
@@ -29,8 +38,10 @@ public:
      */
     virtual bool download();
 
-    bool save();
-
+    /**
+     * @brief Destroy the CFile object
+     *
+     */
     virtual ~CFile() = default;
 
 protected:
@@ -44,5 +55,18 @@ protected:
     string m_Content;
     // bool m_IsExternal;
 
+    /**
+     * @brief Prepare the required folder structure
+     *
+     */
     void createPath();
+
+    /**
+     * @brief Flush the File content to a file on disk
+     * The m_Filename and m_OutputPath variables need to be set beforehand
+     *
+     * @return true
+     * @return false
+     */
+    bool save();
 };

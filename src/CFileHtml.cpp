@@ -1,6 +1,8 @@
 /**
- * @file CFile.h
+ * @file CFileHtml.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Polymorphic derived class that also parses the HTML document and recursively downloads subsequent files
+ *
  */
 
 #include <stdlib.h>

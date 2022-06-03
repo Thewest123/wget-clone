@@ -1,9 +1,11 @@
-#pragma once
-
 /**
- * @file CFile.h
+ * @file CFileHtml.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Polymorphic derived class that also parses the HTML document and recursively downloads subsequent files
+ *
  */
+
+#pragma once
 
 #include <stdlib.h>
 #include <iostream>
@@ -19,20 +21,31 @@ using namespace std;
 class CFileHtml : public CFile
 {
 public:
+    /**
+     * @brief Construct a new CFileHtml object
+     *
+     * @param httpd Pointer to the HttpsDownloader
+     * @param depth Current depth of this file
+     * @param url URLHandler of this file
+     */
     CFileHtml(shared_ptr<CHttpsDownloader> httpd, size_t depth, CURLHandler url)
         : CFile(httpd, depth, url){};
 
+    /**
+     * @brief Destroy the CFileHtml object
+     *
+     */
     virtual ~CFileHtml() = default;
 
     /**
-     * @brief Fetch the File from URL and save it to disk, recursively download other files
+     * @brief Fetch the File from URL and save it to disk, recursively download subsequent files
      *
      */
     virtual bool download() override;
 
 private:
     /**
-     * @brief Parse the file and return other files to download
+     * @brief Parse the file and return subsequent files to download
      *
      * @return set<CFile>
      */

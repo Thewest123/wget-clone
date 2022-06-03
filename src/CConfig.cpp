@@ -1,6 +1,8 @@
 /**
- * @file CConfig.h
+ * @file CConfig.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Config singleton class to parse, store, and provide config values to other parts of the program
+ *
  */
 
 #include "CConfig.h"

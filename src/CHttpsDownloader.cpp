@@ -1,6 +1,8 @@
 /**
- * @file CHttpDownloader.cpp
+ * @file CHttpsDownloader.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Class that interacts through sockets with web server, makes SSL handshake and validates certificates, downloads content and parses headers
+ *
  */
 
 #include <iostream>
@@ -59,16 +61,6 @@ CHttpsDownloader::CHttpsDownloader()
     SSL_CTX_set_timeout(m_Ctx.get(), 10L);
 }
 
-CHttpsDownloader::~CHttpsDownloader()
-{
-    // SSL_CTX_free(ctx);
-}
-
-/**
- * @brief Make GET request to the URL and save it to file
- *
- * @param url
- */
 string CHttpsDownloader::get(CURLHandler &url)
 {
     string response = "";
@@ -99,12 +91,6 @@ string CHttpsDownloader::get(CURLHandler &url)
             return "Can't connect";
         }
 
-        // if (BIO_do_connect(bio.get()) <= 0)
-        // {
-        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect!");
-        //     //! throw
-        // }
-
         auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_Ctx.get(), 1));
         BIO_push(ssl_bio.get(), bio.release());
 
@@ -130,12 +116,6 @@ string CHttpsDownloader::get(CURLHandler &url)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Verbose, "SSL handshake success!");
         }
-
-        // if (BIO_do_handshake(ssl_bio.get()) <= 0)
-        // {
-        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't make SSL handshake!");
-        //     //! throw
-        // }
 
         SSL *sslpointer = getSSL(ssl_bio.get());
         verifyCertificate(sslpointer, host.c_str());
@@ -170,55 +150,8 @@ string CHttpsDownloader::get(CURLHandler &url)
     return response;
 }
 
-// private
-
-bool CHttpsDownloader::parseUrl(const string &url, bool &isHttps, string &host, string &resource) const
-{
-
-    const regex re("(?:http://|https://)?([^/]{3,})(.*)", regex_constants::icase);
-    smatch result;
-
-    if (!regex_match(url, result, re))
-    {
-        return false;
-    }
-
-    // If url starts with https://
-    if (url.rfind("https://", 0) == 0)
-        isHttps = true;
-    else
-        isHttps = false;
-
-    host = result[1].str();
-    resource = result[2].str();
-
-    if (resource.empty())
-        resource = "/";
-
-    return true;
-}
-
 string CHttpsDownloader::receiveData(BIO *bio)
 {
-    // char buffer[1024];
-
-    // int dataLength = BIO_read(bio, buffer, sizeof(buffer));
-
-    // if (dataLength < 0)
-    // {
-    //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't receive any data!");
-    //     //! throw
-    //     return "";
-    // }
-
-    // else if (BIO_should_retry(bio))
-    //     return receiveData(bio);
-
-    // else if (dataLength >= 0)
-    //     return string(buffer, dataLength);
-
-    // return "";
-
     stringstream ss;
     int dataLength;
     do
