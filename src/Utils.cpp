@@ -49,6 +49,12 @@ size_t Utils::replaceAll(std::string &str, const std::string &what, const std::s
     size_t index = 0;
     size_t count = 0;
 
+    if (what.empty())
+        throw std::invalid_argument("'what' argument cannot be empty!");
+
+    if (what == str)
+        throw std::invalid_argument("'what' argument cannot be equal to 'str'!");
+
     while (true)
     {
         /* Locate the substring to replace. */
@@ -57,11 +63,11 @@ size_t Utils::replaceAll(std::string &str, const std::string &what, const std::s
             break;
 
         /* Make the replacement. */
-        size_t toLength = to.length();
-        str.replace(index, toLength, to);
+        size_t whatLength = what.length();
+        str.replace(index, whatLength, to);
 
         /* Advance index forward so the next iteration doesn't pick it up as well. */
-        index += toLength;
+        index += whatLength;
         count++;
     }
 
