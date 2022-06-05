@@ -31,7 +31,13 @@ CHttpsDownloader::CHttpsDownloader()
     string certStore = static_cast<string>(CConfig::getInstance()["cert_store"]);
 
     if (!certStore.empty())
-        SSL_CTX_load_verify_locations(m_Ctx.get(), NULL, certStore.c_str());
+    {
+        int result = SSL_CTX_load_verify_locations(m_Ctx.get(), NULL, certStore.c_str());
+        if (result == 1)
+            CLogger::getInstance().log(CLogger::LogLevel::Info, "Custom cert store \"" + certStore + "\" successfully loaded!");
+        else
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Cannot load custom cert store \"" + certStore + "\"");
+    }
 
     // Add system preinstalled certificates
     if (SSL_CTX_set_default_verify_paths(m_Ctx.get()) != 1)
@@ -244,7 +250,7 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
 
         CURLHandler newUrl(hdr_location);
 
-        if (currentUrl.getDomainNorm() != newUrl.getDomainNorm())
+        if (CURLHandler(static_cast<string>(CConfig::getInstance()["url"])).getDomainNorm() != newUrl.getDomainNorm())
             currentUrl = CURLHandler(hdr_location, true);
         else
             currentUrl = CURLHandler(hdr_location, currentUrl.isExternal());
@@ -272,7 +278,7 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
 
         CURLHandler newUrl(hdr_location);
 
-        if (currentUrl.getDomainNorm() != newUrl.getDomainNorm())
+        if (CURLHandler(static_cast<string>(CConfig::getInstance()["url"])).getDomainNorm() != newUrl.getDomainNorm())
             currentUrl = CURLHandler(hdr_location, true);
         else
             currentUrl = CURLHandler(hdr_location, currentUrl.isExternal());

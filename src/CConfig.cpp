@@ -246,7 +246,6 @@ bool CConfig::parseArgs(int argc, char const *argv[])
         return false;
     }
 
-    cout << "URL: " << ((string)((*this)["url"])) << endl;
     return true;
 }
 

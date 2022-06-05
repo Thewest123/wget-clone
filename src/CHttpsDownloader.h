@@ -42,21 +42,20 @@ using std::string, std::vector, std::unique_ptr;
 // available on https://quuxplusone.github.io/blog/2020/01/24/openssl-part-1/
 // but thoroughly modified to use STL functions and types instead of C functions, to fix memory leaks, and rewritten to use non-blocking sockets
 
-template <class T>
+template <typename T>
 struct DeleterOf;
+
 template <>
 struct DeleterOf<BIO>
 {
     void operator()(BIO *p) const { BIO_free_all(p); }
 };
+
 template <>
 struct DeleterOf<SSL_CTX>
 {
     void operator()(SSL_CTX *p) const { SSL_CTX_free(p); }
 };
-
-template <typename T>
-struct DeleterOf;
 
 class CHttpsDownloader
 {

@@ -1,7 +1,7 @@
 /**
- * @file CFileHtml.cpp
+ * @file CFileCss.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Polymorphic derived class that also parses the HTML document and recursively downloads subsequent files
+ * @brief Polymorphic derived class that also parses the CSS document and recursively downloads subsequent files
  *
  */
 
@@ -13,8 +13,8 @@
 #include <memory> // shared_ptr<>
 #include <string> // string
 
-#include "CFileHtml.h"
 #include "CFileCss.h"
+#include "CFileHtml.h"
 #include "CLogger.h"
 #include "CConfig.h"
 #include "Utils.h"
@@ -22,15 +22,15 @@
 // using namespace std;
 using std::string, std::stringstream, std::regex, std::regex_replace, std::set, std::cout, std::endl, std::make_shared;
 
-// CFileHtml::~CFileHtml() = default;
+// CFileCss::~CFileCss() = default;
 
-bool CFileHtml::download()
+bool CFileCss::download()
 {
     // If file already exists or couldn't be downloaded, don't do anything
     if (!CFile::download())
         return false;
 
-    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading HTML: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
+    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading CSS: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
 
     prepareRootUrls();
 
@@ -48,45 +48,46 @@ bool CFileHtml::download()
     return true;
 }
 
-void CFileHtml::insertAnnoyingAdvertisementThatNobodyWantsToSee()
+void CFileCss::insertAnnoyingAdvertisementThatNobodyWantsToSee()
 {
     if (static_cast<bool>(CConfig::getInstance()["advertisement"]) == false)
         return;
 
     stringstream ss;
-    ss << "\n\n<!--\n"
-       << " This page was mirrored using Wget Clone | https://muj.link/wget \n"
-       << " __    __           _     ___ _                  \n"
-       << "/ / /\\ \\ \\__ _  ___| |_  / __\\ | ___  _ __   ___ \n"
-       << "\\ \\/  \\/ / _` |/ _ \\ __|/ /  | |/ _ \\| '_ \\ / _ \\\n"
-       << " \\  /\\  / (_| |  __/ |_/ /___| | (_) | | | |  __/\n"
-       << "  \\/  \\/ \\__, |\\___|\\__\\____/|_|\\___/|_| |_|\\___|\n"
-       << "         |___/                                   \n"
-       << "-->\n";
+    ss << "\n\n/**\n"
+       << " * This page was mirrored using Wget Clone | https://muj.link/wget \n"
+       << " *  __    __           _     ___ _                  \n"
+       << " * / / /\\ \\ \\__ _  ___| |_  / __\\ | ___  _ __   ___ \n"
+       << " * \\ \\/  \\/ / _` |/ _ \\ __|/ /  | |/ _ \\| '_ \\ / _ \\\n"
+       << " *  \\  /\\  / (_| |  __/ |_/ /___| | (_) | | | |  __/\n"
+       << " *   \\/  \\/ \\__, |\\___|\\__\\____/|_|\\___/|_| |_|\\___|\n"
+       << " *          |___/                                   \n"
+       << " */\n";
 
     m_Content += ss.str();
 
     //    ¯\_(ツ)_/¯
 }
 
-void CFileHtml::prepareRootUrls()
+void CFileCss::prepareRootUrls()
 {
     stringstream replaceString;
-
-    replaceString << "$1\""; // src= or href=
 
     for (size_t i = 0; i < m_Url.getPathDepth(); i++)
     {
         replaceString << "../";
     }
 
-    replaceString << "$2\""; // the link itself
+    replaceString << "$1\""; // the link itself
 
-    const regex re("(srcset=|src=|href=)[\"']\\/([^\\/][^\"']*)[\"']", std::regex_constants::icase);
-    m_Content = regex_replace(m_Content, re, replaceString.str());
+    const regex re_url("(?:url ?\\([\"']?(?!data:|#)((?:\\/)[^;\"'\\s]+)[\"']?)\\)", std::regex_constants::icase);
+    const regex re_import("(?:@import [\"']?(?!url\\(|data:|#)((?:\\/)[^;\"'\\s]+)[\"']?)", std::regex_constants::icase);
+
+    m_Content = regex_replace(m_Content, re_url, replaceString.str());
+    m_Content = regex_replace(m_Content, re_import, replaceString.str());
 }
 
-void CFileHtml::replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler)
+void CFileCss::replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler)
 {
     stringstream replaceString;
 
@@ -115,7 +116,7 @@ void CFileHtml::replaceExternalWithLocal(const string &searchString, const CURLH
     cout << "Replaced '" << searchString << "' with '" << replaceString.str() << "'" << endl;
 }
 
-set<shared_ptr<CFile>> CFileHtml::parseFile()
+set<shared_ptr<CFile>> CFileCss::parseFile()
 {
     set<shared_ptr<CFile>> nextFiles;
 
@@ -123,17 +124,30 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
     try
     {
-        // Match everything in src= and href= that doesn't start with http or https
-        const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|//)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+        // Match everything in url() that doesn't start with http or https
+        const regex re_url("(?:url ?\\([\"']?(?!data:|#|http)([^;\"'\\s]+)[\"']?)\\)", std::regex_constants::icase);
 
-        std::sregex_iterator iter(m_Content.begin(), m_Content.end(), re);
-        std::sregex_iterator end;
+        // Match everything in @import that doesn't start with http or https
+        const regex re_import("(?:@import [\"']?(?!url\\(|data:|#|http)([^;\"'\\s]+)[\"']?)", std::regex_constants::icase);
 
-        while (iter != end)
+        std::sregex_iterator iter_url(m_Content.begin(), m_Content.end(), re_url);
+        std::sregex_iterator end_url;
+
+        std::sregex_iterator iter_import(m_Content.begin(), m_Content.end(), re_import);
+        std::sregex_iterator end_import;
+
+        while (iter_url != end_url)
         {
             // cout << (*iter)[1] << endl;
-            nextUrls.insert((*iter)[1]);
-            iter++;
+            nextUrls.insert((*iter_url)[1]);
+            iter_url++;
+        }
+
+        while (iter_import != end_import)
+        {
+            // cout << (*iter)[1] << endl;
+            nextUrls.insert((*iter_import)[1]);
+            iter_import++;
         }
     }
     catch (std::regex_error &e)
@@ -166,14 +180,14 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
         shared_ptr<CFile> newFile;
 
         if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
-            newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
+            newFile = make_shared<CFileHtml>(m_HttpD, m_Depth, newLink);
         else if (Utils::endsWith(newLink.getNormURL(), ".css"))
             newFile = make_shared<CFileCss>(m_HttpD, m_Depth, newLink);
         else
-            newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
+            newFile = make_shared<CFile>(m_HttpD, m_Depth, newLink);
 
         nextFiles.insert(newFile);
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth + 1) + ")");
+        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
     }
 
     // ----------- External links ---------------
@@ -186,16 +200,30 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
 
     try
     {
-        // Match everything in src= and href= that DOES start with http or https
-        const regex re_external("(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+        // Match everything in url() that DOES start with http or https
+        const regex re_url("(?:url ?\\([\"']?(?!data:|#)((?:http:\\/\\/|https:\\/\\/)[^;\"'\\s]+)[\"']?)\\)", std::regex_constants::icase);
 
-        std::sregex_iterator iter_external(m_Content.begin(), m_Content.end(), re_external);
-        std::sregex_iterator end_external;
+        // Match everything in @import that DOES start with http or https
+        const regex re_import("(?:@import [\"']?(?!url\\(|data:|#)((?:http:\\/\\/|https:\\/\\/)[^;\"'\\s]+)[\"']?)", std::regex_constants::icase);
 
-        while (iter_external != end_external)
+        std::sregex_iterator iter_url(m_Content.begin(), m_Content.end(), re_url);
+        std::sregex_iterator end_url;
+
+        std::sregex_iterator iter_import(m_Content.begin(), m_Content.end(), re_import);
+        std::sregex_iterator end_import;
+
+        while (iter_url != end_url)
         {
-            nextUrlsExternal.insert((*iter_external)[1]);
-            iter_external++;
+            // cout << (*iter)[1] << endl;
+            nextUrls.insert((*iter_url)[1]);
+            iter_url++;
+        }
+
+        while (iter_import != end_import)
+        {
+            // cout << (*iter)[1] << endl;
+            nextUrls.insert((*iter_import)[1]);
+            iter_import++;
         }
     }
     catch (std::regex_error &e)
@@ -226,7 +254,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
         if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
             newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
         else if (Utils::endsWith(newLink.getNormURL(), ".css"))
-            newFile = make_shared<CFileCss>(m_HttpD, m_Depth, newLink);
+            newFile = make_shared<CFileCss>(m_HttpD, m_Depth + 1, newLink);
         else
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 
