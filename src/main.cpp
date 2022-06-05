@@ -3,6 +3,8 @@
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
  */
 
+#ifndef IS_TESTS
+
 #include "CLogger.h"
 #include "CConfig.h"
 #include "CHttpsDownloader.h"
@@ -41,3 +43,4 @@ int main(int argc, char const *argv[])
     logger.log(CLogger::LogLevel::Info, "Done.");
     return EXIT_SUCCESS;
 }
+#endif
