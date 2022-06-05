@@ -1,3 +1,5 @@
+
+
 # -------------- Settings --------------------------
 
 # Main directories
@@ -31,7 +33,7 @@ all: build doc
 # Help with targets
 .PHONY: help
 help:
-	@echo Available targets: all, build, clean, doc, tests, linecount, debug
+	@echo Available targets: all, build, clean, doc, tests, linecount
 
 # Main build
 .PHONY: build
@@ -39,12 +41,17 @@ build: $(TARGET)
 
 # Build and run tests
 .PHONY: tests
-tests:
-	@echo No tests yet!
+tests: tests_build
+	./$(TARGET)
 
+.PHONY: tests_build
+tests_build: CXXFLAGS += -DIS_TESTS
+tests_build: build;
+
+# Clean
 .PHONY: clean
 clean:
-	rm -r $(OBJS_DIR) $(DEPS_DIR)
+	rm -rf $(OBJS_DIR) $(DEPS_DIR)
 	rm -rf doc
 	rm -rf output
 
@@ -53,6 +60,7 @@ clean:
 
 # Link all together to make final target
 $(TARGET): $(OBJS)
+	mkdir -p $(@D)
 	$(LD) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 # Make .o and .d file for every .cpp file
@@ -60,9 +68,6 @@ $(OBJS_DIR)/%.o: $(SOURCE_DIR)/%.cpp
 	mkdir -p $(@D)
 	mkdir -p $(DEPS_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -MF $(DEPS_DIR)/$(basename $(@F)).d -c $< -o $@
-
-# Dummy rule for .d files created by rule above
-$(DEPS_DIR)/%.d: ;
 
 # Add rules for every .cpp file based on .d
 -include $(DEPS)
@@ -72,9 +77,11 @@ $(DEPS_DIR)/%.d: ;
 
 # Create doxygen documentation and index.html redirection
 .PHONY: doc
-doc: Doxyfile assets/docs_files/* $(SOURCES) $(HEADERS)
-	doxygen Doxyfile
-	echo '<meta http-equiv="REFRESH" content="0;URL=html/index.html">' > doc/index.html
+doc: doc/index.html
+
+doc/index.html: Doxyfile assets/docs_files/* $(SOURCES) $(HEADERS)
+	@doxygen ./Doxyfile
+	@echo '<meta http-equiv="REFRESH" content="0;URL=html/index.html">' > doc/index.html
 
 
 # -------------- Utils -----------------------------
