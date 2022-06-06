@@ -49,10 +49,8 @@ CHttpsDownloader::CHttpsDownloader()
     SSL_CTX_set_timeout(m_Ctx.get(), 10L);
 }
 
-string CHttpsDownloader::get(CURLHandler &url)
+CResponse CHttpsDownloader::get(CURLHandler &url)
 {
-    string response = "";
-
     bool isHttps = url.isHttps();
     string host = url.getDomain();
     string resource = "/" + url.getNormURLPath();
@@ -66,8 +64,7 @@ string CHttpsDownloader::get(CURLHandler &url)
         if (bio.get() == nullptr)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection!");
-
-            //! throw
+            return CResponse(CResponse::EStatus::CONN_ERROR);
         }
 
         BIO_set_nbio(bio.get(), 1);
@@ -76,14 +73,12 @@ string CHttpsDownloader::get(CURLHandler &url)
         if (connectStatus == -1)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
-            //! throw
-            return "Can't connect, error";
+            return CResponse(CResponse::EStatus::CONN_ERROR);
         }
         else if (connectStatus == 0)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
-            //! throw
-            return "Can't connect, timed out";
+            return CResponse(CResponse::EStatus::TIMED_OUT);
         }
 
         auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_Ctx.get(), 1));
@@ -105,7 +100,7 @@ string CHttpsDownloader::get(CURLHandler &url)
         if (handshakeResult <= 0)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't make SSL handshake!");
-            //! throw
+            return CResponse(CResponse::EStatus::CONN_ERROR);
         }
         else
         {
@@ -116,7 +111,7 @@ string CHttpsDownloader::get(CURLHandler &url)
         verifyCertificate(sslpointer, host.c_str());
 
         sendHttpRequest(ssl_bio.get(), resource, host);
-        response = receiveHttpMessage(ssl_bio.get(), url);
+        return receiveHttpMessage(ssl_bio.get(), url);
     }
     else
     {
@@ -125,8 +120,7 @@ string CHttpsDownloader::get(CURLHandler &url)
         if (bio.get() == nullptr)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't create connection to " + url.getNormURL() + " !");
-
-            //! throw
+            return CResponse(CResponse::EStatus::CONN_ERROR);
         }
 
         BIO_set_nbio(bio.get(), 1);
@@ -135,21 +129,17 @@ string CHttpsDownloader::get(CURLHandler &url)
         if (connectStatus == -1)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
-            //! throw
-            return "Can't connect, error";
+            return CResponse(CResponse::EStatus::CONN_ERROR);
         }
         else if (connectStatus == 0)
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
-            //! throw
-            return "Can't connect, timed out";
+            return CResponse(CResponse::EStatus::TIMED_OUT);
         }
 
         sendHttpRequest(bio.get(), resource, host);
-        response = receiveHttpMessage(bio.get(), url);
+        return receiveHttpMessage(bio.get(), url);
     }
-
-    return response;
 }
 
 string CHttpsDownloader::receiveData(BIO *bio)
@@ -195,7 +185,7 @@ vector<string> CHttpsDownloader::splitHeaders(const string &header)
     return lines;
 }
 
-string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
+CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
 {
     string header = receiveData(bio);
     string delimiter = "\r\n\r\n";
@@ -215,21 +205,26 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
     // Remove part after delimiter from header
     header = header.substr(0, headerEnd + 2);
 
-    // Split and process headers
+    // Split headers
     vector<string> headers = splitHeaders(header);
 
+    // Check HTTP validity
     regex re_httpStatus("HTTP/\\d\\.\\d\\s+(\\d+)\\s+(.*)", std::regex_constants::icase);
     smatch result;
 
     if (regex_match(headers[0], result, re_httpStatus) == false)
     {
         CLogger::getInstance().log(CLogger::LogLevel::Error, "The server didn't send valid HTTP response!");
-        //! throw
+        return CResponse(CResponse::EStatus::SERVER_ERROR);
     }
 
+    // Set status code
     int statusCode = std::stoi(result[1].str());
-    string hdr_location;
 
+    CResponse response;
+    response.setStatusCode(statusCode);
+
+    // Parse other headers
     for (const string &line : headers)
     {
         size_t colon = line.find(':');
@@ -241,52 +236,23 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
         string value = line.substr(colon + 2); // +2 to skip colon and whitespace
 
         if (key == "Location")
-            hdr_location = value;
+            response.setMovedUrl(value, currentUrl);
+
+        if (key == "Content-Type")
+            response.setContentType(value);
+
+        if (key == "Content-Disposition")
+            response.setContentDisposition(value);
+
+        if (key == "Last-Modified")
+            response.setLastModified(value);
     }
 
-    if (statusCode == 301)
-    {
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "301 Moved Permanently - New location: " + hdr_location);
+    // If finished, don't download body
+    if (response.getStatus() == CResponse::EStatus::FINISHED)
+        return response;
 
-        CURLHandler newUrl(hdr_location);
-
-        if (CURLHandler(static_cast<string>(CConfig::getInstance()["url"])).getDomainNorm() != newUrl.getDomainNorm())
-            currentUrl = CURLHandler(hdr_location, true);
-        else
-            currentUrl = CURLHandler(hdr_location, currentUrl.isExternal());
-
-        return get(currentUrl);
-    }
-    else if (statusCode == 302)
-    {
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "302 Found - New location: " + hdr_location);
-
-        // If the URL is not full, but only relative to domain, prepend it with domain
-        if (Utils::startsWith(hdr_location, "/"))
-        {
-            stringstream ss;
-            if (currentUrl.isHttps())
-                ss << "https://";
-            else
-                ss << "http://";
-
-            ss << currentUrl.getDomain();
-            ss << hdr_location;
-
-            hdr_location = ss.str();
-        }
-
-        CURLHandler newUrl(hdr_location);
-
-        if (CURLHandler(static_cast<string>(CConfig::getInstance()["url"])).getDomainNorm() != newUrl.getDomainNorm())
-            currentUrl = CURLHandler(hdr_location, true);
-        else
-            currentUrl = CURLHandler(hdr_location, currentUrl.isExternal());
-
-        return get(currentUrl);
-    }
-
-    // Read data if possible
+    // Read data if possible (until no more data present)
     while (true)
     {
         string newData = receiveData(bio);
@@ -297,7 +263,10 @@ string CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl)
         body += newData;
     }
 
-    return body;
+    response.setStatus(CResponse::EStatus::FINISHED);
+    response.setBody(body);
+
+    return response;
 }
 
 void CHttpsDownloader::sendHttpRequest(BIO *bio, const string &resource, const string &host)

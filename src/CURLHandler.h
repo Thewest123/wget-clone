@@ -19,6 +19,8 @@ using std::string, std::vector;
 class CURLHandler
 {
 public:
+    CURLHandler() = default;
+
     /**
      * @brief Construct a new CURLHandler object
      *

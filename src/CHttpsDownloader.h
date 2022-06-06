@@ -7,8 +7,8 @@
 
 #pragma once
 
-//#include "CURLHandler.h"
-class CURLHandler;
+#include "CURLHandler.h"
+#include "CResponse.h"
 
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -69,7 +69,15 @@ public:
      * @param url CURLHandler url of the remote file
      * @return string Content of the downloaded file
      */
-    string get(CURLHandler &url);
+    // string get(CURLHandler &url);
+
+    /**
+     * @brief Makes GET request to the URL and returns content
+     *
+     * @param url CURLHandler url of the remote file
+     * @return CResponse Content of the downloaded file
+     */
+    CResponse get(CURLHandler &url);
 
 private:
     /**
@@ -97,7 +105,7 @@ private:
      * @param currentUrl
      * @return string
      */
-    string receiveHttpMessage(BIO *bio, CURLHandler &currentUrl);
+    CResponse receiveHttpMessage(BIO *bio, CURLHandler &currentUrl);
 
     /**
      * @brief Sends the HTTP/HTTPS request using provided BIO

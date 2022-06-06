@@ -9,6 +9,7 @@
 #include "CFile.h"
 #include "CLogger.h"
 #include "CHttpsDownloader.h"
+#include "CResponse.h"
 
 #include <stdlib.h>
 #include <iostream>
@@ -36,7 +37,8 @@ bool CFile::download()
     CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
 
     // Fetch the content from server
-    m_Content = m_HttpD->get(m_Url);
+    auto response = m_HttpD->get(m_Url);
+    m_Content = response.getBody();
 
     createPath();
 
