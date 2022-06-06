@@ -1,0 +1,15 @@
+### C++ ###
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.out
+*.app
+
+### VS Code ###
+.vscode/*
