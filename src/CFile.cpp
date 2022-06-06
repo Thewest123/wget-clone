@@ -23,10 +23,27 @@ bool CFile::download()
     auto &cfg = CConfig::getInstance();
 
     if (static_cast<int>(m_Depth) > static_cast<int>(cfg["depth"]))
-        return false;
+    {
+        // if (static_cast<bool>(cfg["error_page"]))
+        // {
+        //     parsePath();
 
-    // Parse path and create folder structure
-    createPath();
+        //     if (fs::exists(m_OutputPath + m_Filename))
+        //         return false;
+
+        //     // Copy 404.html file into this file
+        //     std::ifstream errorFile("../assets/404.html", std::ios::binary);
+        //     std::ofstream saveFile(m_OutputPath + m_Filename, std::ios::binary);
+
+        //     saveFile << errorFile.rdbuf();
+        //     std::cout << "saved as 404.html" << std::endl;
+        // }
+
+        return false;
+    }
+
+    // Parse path to get m_OutputPath and m_Filename
+    parsePath();
 
     if (fs::exists(m_OutputPath + m_Filename))
     {
@@ -38,9 +55,14 @@ bool CFile::download()
 
     // Fetch the content from server
     auto response = m_HttpD->get(m_Url);
+    while (response.getStatus() == CResponse::EStatus::MOVED)
+    {
+        response = m_HttpD->get(response.m_MovedUrl);
+    }
     m_Content = response.getBody();
 
-    createPath();
+    // Create folder structure
+    fs::create_directories(m_OutputPath);
 
     save();
 
@@ -52,11 +74,12 @@ bool CFile::save()
     // Write content to a file in the prepared folder structure
     ofstream ofs(m_OutputPath + m_Filename, std::ios_base::out | std::ios_base::binary);
     ofs << m_Content;
+    ofs.close();
 
     return true;
 }
 
-void CFile::createPath()
+void CFile::parsePath()
 {
     // ! FIXME: sloucit if else dohromady, duplicitni kod
     if (!m_Url.isExternal())
@@ -92,9 +115,6 @@ void CFile::createPath()
         // If there's no filename, save it as index.html
         if (m_Filename.empty() || m_Filename == "/")
             m_Filename = "index.html";
-
-        // Create folder structure
-        fs::create_directories(m_OutputPath);
 
         logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
         logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);
@@ -132,9 +152,6 @@ void CFile::createPath()
         // If there's no filename, save it as index.html
         if (m_Filename.empty() || m_Filename == "/")
             m_Filename = "index.html";
-
-        // Create folder structure
-        fs::create_directories(m_OutputPath);
 
         logger.log(CLogger::LogLevel::Verbose, "Path: " + m_OutputPath);
         logger.log(CLogger::LogLevel::Verbose, "Filename: " + m_Filename);

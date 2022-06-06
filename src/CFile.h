@@ -64,7 +64,7 @@ protected:
      * @brief Prepare the required folder structure
      *
      */
-    void createPath();
+    void parsePath();
 
     /**
      * @brief Flush the File content to a file on disk

@@ -175,7 +175,7 @@ set<shared_ptr<CFile>> CFileCss::parseFile()
             }
         }
 
-        CURLHandler newLink(urlNoFilename + i);
+        CURLHandler newLink(urlNoFilename + i, m_Url.isExternal());
 
         shared_ptr<CFile> newFile;
 

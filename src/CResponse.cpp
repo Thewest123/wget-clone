@@ -94,6 +94,10 @@ void CResponse::setMovedUrl(const string &location, CURLHandler currentUrl)
 
             newLocation = ss.str();
         }
+        else
+        {
+            newLocation = location;
+        }
 
         CURLHandler newUrl(newLocation);
 
@@ -103,5 +107,5 @@ void CResponse::setMovedUrl(const string &location, CURLHandler currentUrl)
             m_MovedUrl = CURLHandler(newLocation, currentUrl.isExternal());
     }
 
-    m_Status = EStatus::FINISHED;
+    m_Status = EStatus::MOVED;
 }

@@ -14,6 +14,8 @@ public:
     enum class EStatus
     {
         FINISHED,
+        IN_PROGRESS,
+        MOVED,
         TIMED_OUT,
         CONN_ERROR,
         SERVER_ERROR
@@ -43,12 +45,14 @@ public:
 
     void setStatusCode(int statusCode);
 
-private:
-    EStatus m_Status;
-    int m_StatusCode;
+    size_t m_ContentLength = 0;
     CURLHandler m_MovedUrl;
+
+private:
+    EStatus m_Status = EStatus::IN_PROGRESS;
+    int m_StatusCode;
     string m_ContentType;
     string m_ContentDisposition;
-    std::time_t m_LastModified;
+    std::time_t m_LastModified = 0;
     string m_Body;
 };

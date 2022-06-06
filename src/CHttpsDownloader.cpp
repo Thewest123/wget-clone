@@ -155,12 +155,7 @@ string CHttpsDownloader::receiveData(BIO *bio)
         if (dataLength > 0)
             ss << string(buffer, dataLength);
 
-    } while (BIO_should_retry(bio) || dataLength > 0);
-
-    if (ss.str().length() < 1)
-    {
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Can't receive any more data!");
-    }
+    } while (BIO_should_retry(bio));
 
     return ss.str();
 }
@@ -221,7 +216,7 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
     // Set status code
     int statusCode = std::stoi(result[1].str());
 
-    CResponse response;
+    CResponse response(CResponse::EStatus::IN_PROGRESS);
     response.setStatusCode(statusCode);
 
     // Parse other headers
@@ -235,6 +230,12 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
         string key = line.substr(0, colon);
         string value = line.substr(colon + 2); // +2 to skip colon and whitespace
 
+        if (key == "Content-Length")
+        {
+            std::stringstream sstream(value);
+            sstream >> response.m_ContentLength;
+        }
+
         if (key == "Location")
             response.setMovedUrl(value, currentUrl);
 
@@ -244,12 +245,13 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
         if (key == "Content-Disposition")
             response.setContentDisposition(value);
 
-        if (key == "Last-Modified")
-            response.setLastModified(value);
+        // if (key == "Last-Modified")
+        //     response.setLastModified(value);
     }
 
     // If finished, don't download body
-    if (response.getStatus() == CResponse::EStatus::FINISHED)
+    if (response.getStatus() == CResponse::EStatus::FINISHED ||
+        response.getStatus() == CResponse::EStatus::MOVED)
         return response;
 
     // Read data if possible (until no more data present)
@@ -257,7 +259,7 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
     {
         string newData = receiveData(bio);
 
-        if (newData.length() <= 0)
+        if (body.length() >= response.m_ContentLength || newData.length() <= 0)
             break;
 
         body += newData;

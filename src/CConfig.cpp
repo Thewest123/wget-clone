@@ -137,7 +137,10 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-d" || value == "--depth")
         {
-            value = argv[++i];
+            if (++i >= argc)
+                return false;
+
+            value = argv[i];
 
             if (value.find_first_not_of("0123456789") != string::npos)
             {
@@ -151,7 +154,10 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-l" || value == "--limit")
         {
-            value = argv[++i];
+            if (++i >= argc)
+                return false;
+
+            value = argv[i];
 
             logger.log(CLogger::LogLevel::Verbose, "Config: limit = " + value);
             (*this)["limit"] = value;
@@ -177,7 +183,10 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-o" || value == "--output")
         {
-            value = argv[++i];
+            if (++i >= argc)
+                return false;
+
+            value = argv[i];
 
             logger.log(CLogger::LogLevel::Verbose, "Config: output = " + value);
             (*this)["output"] = value;
@@ -199,7 +208,10 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-c" || value == "--cookie")
         {
-            value = argv[++i];
+            if (++i >= argc)
+                return false;
+
+            value = argv[i];
 
             logger.log(CLogger::LogLevel::Verbose, "Config: cookies = " + value);
             (*this)["cookies"] = value;
@@ -207,7 +219,10 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-u" || value == "--user-agent")
         {
-            value = argv[++i];
+            if (++i >= argc)
+                return false;
+
+            value = argv[i];
 
             logger.log(CLogger::LogLevel::Verbose, "Config: user_agent = " + value);
             (*this)["user_agent"] = value;
@@ -215,7 +230,10 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "--cert-store")
         {
-            value = argv[++i];
+            if (++i >= argc)
+                return false;
+
+            value = argv[i];
 
             logger.log(CLogger::LogLevel::Verbose, "Config: cert_store = " + value);
             (*this)["cert_store"] = value;

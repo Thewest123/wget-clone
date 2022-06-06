@@ -9,6 +9,8 @@
 #include <iostream>
 #include <set>
 #include <regex>
+#include <filesystem>
+#include <fstream>
 
 #include <memory> // shared_ptr<>
 #include <string> // string
@@ -20,7 +22,8 @@
 #include "Utils.h"
 
 // using namespace std;
-using std::string, std::stringstream, std::regex, std::regex_replace, std::set, std::cout, std::endl, std::make_shared;
+using std::string, std::stringstream, std::regex, std::regex_replace, std::set, std::cout, std::endl, std::make_shared, std::ifstream, std::ofstream;
+namespace fs = std::filesystem;
 
 // CFileHtml::~CFileHtml() = default;
 
@@ -28,13 +31,41 @@ bool CFileHtml::download()
 {
     // If file already exists or couldn't be downloaded, don't do anything
     if (!CFile::download())
-        return false;
+    {
+        auto &cfg = CConfig::getInstance();
+
+        if (static_cast<int>(m_Depth) > static_cast<int>(cfg["depth"]))
+        {
+            if (static_cast<bool>(cfg["error_page"]))
+            {
+                parsePath();
+
+                if (fs::exists(m_OutputPath + m_Filename))
+                    return false;
+
+                // Create folder structure
+                fs::create_directories(m_OutputPath);
+
+                // Copy 404.html file into this file
+                ifstream errorFile("./assets/404.html", std::ios::binary | std::ios::in);
+                ofstream saveFile(m_OutputPath + m_Filename, std::ios::binary | std::ios::out);
+
+                saveFile << errorFile.rdbuf();
+                saveFile.close();
+            }
+
+            return false;
+        }
+    }
 
     CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading HTML: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
 
     prepareRootUrls();
 
     auto newFiles = parseFile();
+
+    if (static_cast<bool>(CConfig::getInstance()["remote_images"]))
+        makeRelativeImagesExternal();
 
     insertAnnoyingAdvertisementThatNobodyWantsToSee();
 
@@ -86,6 +117,20 @@ void CFileHtml::prepareRootUrls()
     m_Content = regex_replace(m_Content, re, replaceString.str());
 }
 
+void CFileHtml::makeRelativeImagesExternal()
+{
+    stringstream replaceString;
+
+    replaceString << "$1\""; // src= or href=
+
+    replaceString << m_Url.getNormURL();
+
+    replaceString << "$2\""; // the link itself
+
+    const regex re("(<(?:img).*(?:src=))[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\\/][^\"']*)[\"']", std::regex_constants::icase);
+    m_Content = regex_replace(m_Content, re, replaceString.str());
+}
+
 void CFileHtml::replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler)
 {
     stringstream replaceString;
@@ -112,7 +157,7 @@ void CFileHtml::replaceExternalWithLocal(const string &searchString, const CURLH
 
     Utils::replaceAll(m_Content, searchString, replaceString.str());
 
-    cout << "Replaced '" << searchString << "' with '" << replaceString.str() << "'" << endl;
+    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Replaced all '" + searchString + "' with '" + replaceString.str() + "'");
 }
 
 set<shared_ptr<CFile>> CFileHtml::parseFile()
@@ -124,7 +169,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
     try
     {
         // Match everything in src= and href= that doesn't start with http or https
-        const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|//)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+        const regex re("<(?!img).*(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
 
         std::sregex_iterator iter(m_Content.begin(), m_Content.end(), re);
         std::sregex_iterator end;
@@ -134,6 +179,46 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
             // cout << (*iter)[1] << endl;
             nextUrls.insert((*iter)[1]);
             iter++;
+        }
+
+        if (!static_cast<bool>(CConfig::getInstance()["remote_images"]))
+        {
+            // Match everything in src= and href= that doesn't start with http or https
+            const regex re_img("<(?:img).*(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+
+            std::sregex_iterator iter_img(m_Content.begin(), m_Content.end(), re_img);
+            std::sregex_iterator end_img;
+
+            while (iter_img != end_img)
+            {
+                nextUrls.insert((*iter_img)[1]);
+                iter_img++;
+            }
+
+            // Match everything in srcset=
+            const regex re2("(?:srcset=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+
+            std::sregex_iterator iter2(m_Content.begin(), m_Content.end(), re2);
+            std::sregex_iterator end2;
+
+            while (iter2 != end2)
+            {
+                string srcsetContent = (*iter2)[1];
+
+                // Match separately every link in srcset=
+                const regex re_srcset("[^\"'=\\s]+\\.[^\\s]+", std::regex_constants::icase);
+
+                std::sregex_iterator iter_srcset(srcsetContent.begin(), srcsetContent.end(), re_srcset);
+                std::sregex_iterator end_srcset;
+
+                while (iter_srcset != end_srcset)
+                {
+                    nextUrls.insert((*iter_srcset)[0]);
+                    iter_srcset++;
+                }
+
+                iter2++;
+            }
         }
     }
     catch (std::regex_error &e)
@@ -161,7 +246,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
             }
         }
 
-        CURLHandler newLink(urlNoFilename + i);
+        CURLHandler newLink(urlNoFilename + i, m_Url.isExternal());
 
         shared_ptr<CFile> newFile;
 
@@ -187,7 +272,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
     try
     {
         // Match everything in src= and href= that DOES start with http or https
-        const regex re_external("(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+        const regex re_external("<(?:img).*(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
 
         std::sregex_iterator iter_external(m_Content.begin(), m_Content.end(), re_external);
         std::sregex_iterator end_external;
@@ -196,6 +281,46 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
         {
             nextUrlsExternal.insert((*iter_external)[1]);
             iter_external++;
+        }
+
+        if (!static_cast<bool>(CConfig::getInstance()["remote_images"]))
+        {
+            // Match everything in src= and href= that DOES start with http or https
+            const regex re_external_imgs("<(?:img).*(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+
+            std::sregex_iterator iter_external_imgs(m_Content.begin(), m_Content.end(), re_external_imgs);
+            std::sregex_iterator end_external_imgs;
+
+            while (iter_external_imgs != end_external_imgs)
+            {
+                nextUrlsExternal.insert((*iter_external_imgs)[1]);
+                iter_external_imgs++;
+            }
+
+            // Match everything in srcset=
+            const regex re2("(?:srcset=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
+
+            std::sregex_iterator iter2(m_Content.begin(), m_Content.end(), re2);
+            std::sregex_iterator end2;
+
+            while (iter2 != end2)
+            {
+                string srcsetContent = (*iter2)[1];
+
+                // Match separately every link in srcset=
+                const regex re_srcset("[^\"'=\\s]+\\.[^\\s]+", std::regex_constants::icase);
+
+                std::sregex_iterator iter_srcset(srcsetContent.begin(), srcsetContent.end(), re_srcset);
+                std::sregex_iterator end_srcset;
+
+                while (iter_srcset != end_srcset)
+                {
+                    nextUrls.insert((*iter_srcset)[0]);
+                    iter_srcset++;
+                }
+
+                iter2++;
+            }
         }
     }
     catch (std::regex_error &e)
@@ -226,7 +351,7 @@ set<shared_ptr<CFile>> CFileHtml::parseFile()
         if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
             newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
         else if (Utils::endsWith(newLink.getNormURL(), ".css"))
-            newFile = make_shared<CFileCss>(m_HttpD, m_Depth, newLink);
+            newFile = make_shared<CFileCss>(m_HttpD, m_Depth + 1, newLink);
         else
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 

@@ -61,10 +61,19 @@ private:
     void prepareRootUrls();
 
     /**
+     * @brief Replace all relative local links in images to external links
+     *
+     * For example: <img src="assets/main.js"> may become <img src="https://google.com/assets/main.js"
+     *
+     */
+    void makeRelativeImagesExternal();
+
+    /**
      * @brief Replace external link like "https://google.com/index.html" with relative local link like "../../__external/google.com/index.html"
      *
      */
-    void replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler);
+    void
+    replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler);
 
     /**
      * @brief Insert ASCII art with project link to the end of Html file
