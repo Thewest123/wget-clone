@@ -16,7 +16,7 @@ TARGET		:= $(BUILD_DIR)/wget.out
 CXX			:= g++
 LD			:= g++
 CXXFLAGS	:= -g -Wall -Wextra -pedantic -std=c++17
-LDFLAGS		:= -lssl -lcrypto
+LDFLAGS		:= -lstdc++fs -lssl -lcrypto
 
 # Additional variables
 SOURCES		:= $(wildcard $(SOURCE_DIR)/*.cpp)
@@ -60,17 +60,21 @@ clean:
 
 # Link all together to make final target
 $(TARGET): $(OBJS)
-	mkdir -p $(@D)
 	$(LD) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 # Make .o and .d file for every .cpp file
-$(OBJS_DIR)/%.o: $(SOURCE_DIR)/%.cpp
-	mkdir -p $(@D)
-	mkdir -p $(DEPS_DIR)
+$(OBJS_DIR)/%.o: $(SOURCE_DIR)/%.cpp $(OBJS_DIR) $(DEPS_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -MF $(DEPS_DIR)/$(basename $(@F)).d -c $< -o $@
 
 # Add rules for every .cpp file based on .d
 -include $(DEPS)
+
+# Create directories if not present
+$(OBJS_DIR):
+	mkdir -p $@
+
+$(DEPS_DIR):
+	mkdir -p $@
 
 
 # -------------- Documentation ---------------------
