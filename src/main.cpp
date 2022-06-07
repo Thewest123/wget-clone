@@ -37,7 +37,15 @@ int main(int argc, char const *argv[])
     CFileHtml root(httpd, 1, rootUrl);
 
     // Download the file and recursively other linked files
-    root.download();
+    try
+    {
+        root.download();
+    }
+    catch (std::exception &e)
+    {
+        CLogger::getInstance().log(CLogger::LogLevel::Error, e.what());
+        return EXIT_FAILURE;
+    }
 
     // Exit
     logger.log(CLogger::LogLevel::Info, "Done.");
