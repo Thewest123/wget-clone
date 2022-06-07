@@ -23,12 +23,13 @@ CConfig::CConfig()
     (*this)["error_page"] = false;
     (*this)["output"] = string("./output");
     (*this)["log_level"] = 1;
+    (*this)["log_file"] = string("");
     (*this)["cookies"] = string("");
     (*this)["user_agent"] = string("WGET-Project/0.1 (FIT CVUT, Jan Cerny <cernyj87@fit.cvut.cz>)");
     (*this)["advertisement"] = true;
     (*this)["limit"] = string("");
     (*this)["cert_store"] = string("");
-};
+}
 
 string CConfig::formatOption(size_t paramSize, const string &args, const string &helpText) const
 {
@@ -93,6 +94,10 @@ void CConfig::printHelp(const string &programName) const
                          "Print only errors");
 
     cout << formatOption(paramSize,
+                         "-L, --log-file",
+                         "Send log output to file instead of terminal");
+
+    cout << formatOption(paramSize,
                          "-c, --cookie <cookie>",
                          "Set Cookie header to this value");
 
@@ -102,7 +107,7 @@ void CConfig::printHelp(const string &programName) const
 
     cout << formatOption(paramSize,
                          "--cert-store <path>",
-                         "Path to user defined certificate keys store (default = \"\"; uses system store)");
+                         "Path to user defined keys bundle .crt file (eg. \"./assets/certs/ca-certificates.crt\") (default = \"\"; uses system store)");
 
     cout << formatOption(paramSize,
                          "--disable-annoying-advertisement-that-nobody-wants-to-see",
@@ -154,13 +159,8 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-l" || value == "--limit")
         {
-            if (++i >= argc)
+            if (!setWithNext("limit", i, argc, argv))
                 return false;
-
-            value = argv[i];
-
-            logger.log(CLogger::LogLevel::Verbose, "Config: limit = " + value);
-            (*this)["limit"] = value;
         }
 
         else if (value == "-r" || value == "--remote")
@@ -183,19 +183,15 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-o" || value == "--output")
         {
-            if (++i >= argc)
+            if (!setWithNext("output", i, argc, argv))
                 return false;
-
-            value = argv[i];
-
-            logger.log(CLogger::LogLevel::Verbose, "Config: output = " + value);
-            (*this)["output"] = value;
         }
 
         else if (value == "-v" || value == "--verbose")
         {
             logger.log(CLogger::LogLevel::Verbose, "Config: log_level = verbose");
             (*this)["log_level"] = 0;
+
             logger.setLevel(CLogger::LogLevel::Verbose);
         }
 
@@ -203,40 +199,32 @@ bool CConfig::parseArgs(int argc, char const *argv[])
         {
             logger.log(CLogger::LogLevel::Verbose, "Config: log_level = error");
             (*this)["log_level"] = 2;
+
             logger.setLevel(CLogger::LogLevel::Error);
+        }
+
+        else if (value == "-L" || value == "--log-file")
+        {
+            if (!setWithNext("log_file", i, argc, argv))
+                return false;
         }
 
         else if (value == "-c" || value == "--cookie")
         {
-            if (++i >= argc)
+            if (!setWithNext("cookies", i, argc, argv))
                 return false;
-
-            value = argv[i];
-
-            logger.log(CLogger::LogLevel::Verbose, "Config: cookies = " + value);
-            (*this)["cookies"] = value;
         }
 
         else if (value == "-u" || value == "--user-agent")
         {
-            if (++i >= argc)
+            if (!setWithNext("user_agent", i, argc, argv))
                 return false;
-
-            value = argv[i];
-
-            logger.log(CLogger::LogLevel::Verbose, "Config: user_agent = " + value);
-            (*this)["user_agent"] = value;
         }
 
         else if (value == "--cert-store")
         {
-            if (++i >= argc)
+            if (!setWithNext("cert_store", i, argc, argv))
                 return false;
-
-            value = argv[i];
-
-            logger.log(CLogger::LogLevel::Verbose, "Config: cert_store = " + value);
-            (*this)["cert_store"] = value;
         }
 
         else if (value == "--disable-annoying-advertisement-that-nobody-wants-to-see")
@@ -263,6 +251,19 @@ bool CConfig::parseArgs(int argc, char const *argv[])
         logger.log(CLogger::LogLevel::Error, "No URL provided!");
         return false;
     }
+
+    return true;
+}
+
+bool CConfig::setWithNext(const string &configName, int &currentArg, int argc, const char *argv[])
+{
+    if (++currentArg >= argc)
+        return false;
+
+    string value = argv[currentArg];
+
+    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Config: " + configName + " = " + value);
+    (*this)[configName] = value;
 
     return true;
 }

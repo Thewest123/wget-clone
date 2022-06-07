@@ -98,4 +98,6 @@ private:
      * @return string Formatted string
      */
     string formatOption(size_t paramSize, const string &args, const string &helpText) const;
+
+    bool setWithNext(const string &configName, int &currentArg, int argc, const char *argv[]);
 };
