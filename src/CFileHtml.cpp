@@ -48,6 +48,9 @@ bool CFileHtml::download()
 
                 // Copy 404.html file into this file
                 ifstream errorFile("./assets/404.html", std::ios::binary | std::ios::in);
+                if (errorFile.fail())
+                    throw std::runtime_error("Cannot open asset 404.html!");
+
                 ofstream saveFile(m_OutputPath + m_Filename, std::ios::binary | std::ios::out);
 
                 saveFile << errorFile.rdbuf();
@@ -56,6 +59,8 @@ bool CFileHtml::download()
 
             return false;
         }
+
+        return false;
     }
 
     CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading HTML: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
