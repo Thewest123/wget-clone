@@ -9,8 +9,16 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <sstream>
 
-using std::string, std::cout, std::endl;
+using std::string, std::cout, std::endl, std::ofstream, std::stringstream;
+
+CLogger::~CLogger()
+{
+    if (m_Type == LogType::File)
+        m_Ofs.close();
+}
 
 CLogger &CLogger::getInstance()
 {
@@ -37,31 +45,40 @@ CLogger::CLogger(LogLevel logLevel)
     : m_Level(logLevel),
       m_Type(CLogger::LogType::Terminal) {}
 
-CLogger::CLogger(LogLevel logLevel, const string &filePath)
-    : m_Level(logLevel),
-      m_Type(CLogger::LogType::File),
-      m_FilePath(filePath) {}
+void CLogger::setToFile(const string &filePath)
+{
+    m_Type = LogType::File;
+    m_FilePath = filePath;
+    m_Ofs = ofstream(m_FilePath, std::ios_base::app);
+}
 
 /**
- * @brief Log message in VERBOSE level
+ * @brief Log message in depending on level
  *
  * @param msg
  */
-void CLogger::log(const CLogger::LogLevel level, const string &msg) const
+void CLogger::log(const CLogger::LogLevel level, const string &msg)
 {
     if (level < m_Level)
         return;
 
-    string levelName;
+    stringstream ss;
+
+    ss << "[";
 
     if (level == LogLevel::Error)
-        levelName = "ERROR";
+        ss << "ERROR";
     else if (level == LogLevel::Info)
-        levelName = "INFO";
+        ss << "INFO";
     else if (level == LogLevel::Verbose)
-        levelName = "VERBOSE";
+        ss << "VERBOSE";
 
-    logToOutput("[" + levelName + "] (" + getDateTimeNow() + "): " + msg);
+    ss << "] ("
+       << getDateTimeNow()
+       << "): "
+       << msg;
+
+    logToOutput(ss.str());
 }
 
 /**
@@ -69,19 +86,15 @@ void CLogger::log(const CLogger::LogLevel level, const string &msg) const
  *
  * @param msg
  */
-void CLogger::logToOutput(const string &msg) const
+void CLogger::logToOutput(const string &msg)
 {
     if (m_Type == CLogger::LogType::Terminal)
-    {
         cout << msg << endl;
-        return;
-    }
 
-    if (m_Type == CLogger::LogType::File)
-    {
-        // todo
-        return;
-    }
+    else if (m_Type == CLogger::LogType::File)
+        m_Ofs << msg << endl;
+
+    return;
 }
 
 string CLogger::getDateTimeNow() const

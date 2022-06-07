@@ -9,8 +9,9 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
 
-using std::string;
+using std::string, std::ofstream;
 
 class CLogger
 {
@@ -24,20 +25,21 @@ public:
 
     CLogger() = delete;
 
+    ~CLogger();
+
     /**
      * @brief Construct a new CLogger object, with logging to 'cout'
      *
      * @param logLevel Minimal level to log
      */
-    CLogger(LogLevel logLevel);
+    explicit CLogger(LogLevel logLevel);
 
     /**
-     * @brief Construct a new CLogger object, with logging to a file
+     * @brief Set the logger to send next logs to file instead of terminal
      *
-     * @param logLevel Minimal level to log
      * @param filePath Path to the log file
      */
-    CLogger(LogLevel logLevel, const string &filePath);
+    void setToFile(const string &filePath);
 
     /**
      * @brief Log a message
@@ -45,7 +47,7 @@ public:
      * @param level LogLevel level of this message
      * @param msg The message
      */
-    void log(const LogLevel level, const string &msg) const;
+    void log(const LogLevel level, const string &msg);
 
     /**
      * @brief Set current log level
@@ -84,13 +86,14 @@ private:
     LogLevel m_Level;
     LogType m_Type;
     string m_FilePath;
+    ofstream m_Ofs;
 
     /**
      * @brief Print the message to COUT or FILE
      *
      * @param msg
      */
-    void logToOutput(const string &msg) const;
+    void logToOutput(const string &msg);
 
     /**
      * @brief Return formatted string with current date and time
