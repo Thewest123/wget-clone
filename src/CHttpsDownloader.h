@@ -57,6 +57,12 @@ struct DeleterOf<SSL_CTX>
     void operator()(SSL_CTX *p) const { SSL_CTX_free(p); }
 };
 
+template <>
+struct DeleterOf<X509>
+{
+    void operator()(X509 *p) const { X509_free(p); }
+};
+
 class CHttpsDownloader
 {
 public:
@@ -129,8 +135,10 @@ private:
      *
      * @param ssl Pointer to the SSL certificate
      * @param expectedHostname Hostname for verification
+     * @return true If valid
+     * @return false If invalid or error
      */
-    void verifyCertificate(SSL *ssl, const string &expectedHostname);
+    bool verifyCertificate(SSL *ssl, const string &expectedHostname);
 
     /**
      * @brief Pointer to the SSL context

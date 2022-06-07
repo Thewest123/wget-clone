@@ -32,18 +32,17 @@ CHttpsDownloader::CHttpsDownloader()
 
     if (!certStore.empty())
     {
-        int result = SSL_CTX_load_verify_locations(m_Ctx.get(), NULL, certStore.c_str());
+        int result = SSL_CTX_load_verify_locations(m_Ctx.get(), certStore.c_str(), NULL);
         if (result == 1)
-            CLogger::getInstance().log(CLogger::LogLevel::Info, "Custom cert store \"" + certStore + "\" successfully loaded!");
+            CLogger::getInstance().log(CLogger::LogLevel::Info, "Custom SSL trust store \"" + certStore + "\" successfully loaded!");
         else
-            CLogger::getInstance().log(CLogger::LogLevel::Error, "Cannot load custom cert store \"" + certStore + "\"");
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Cannot load custom SSL trust store \"" + certStore + "\"!");
     }
 
     // Add system preinstalled certificates
     if (SSL_CTX_set_default_verify_paths(m_Ctx.get()) != 1)
     {
-        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't setup SSL trust store, are any certificates installed? Use flag --cert-store to specify custom path.");
-        //! throw
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't setup SSL trust store! Use flag --cert-store to specify custom path.");
     }
 
     SSL_CTX_set_timeout(m_Ctx.get(), 10L);
@@ -69,17 +68,51 @@ CResponse CHttpsDownloader::get(CURLHandler &url)
 
         BIO_set_nbio(bio.get(), 1);
 
-        int connectStatus = BIO_do_connect_retry(bio.get(), 10, -1);
-        if (connectStatus == -1)
+        // Socket connection fold old OpenSSL version
+        // @inspiredBy https://stackoverflow.com/a/39060166
+        int connectResult = BIO_do_connect(bio.get());
+        int fd;
+        fd_set confds;
+
+        if ((connectResult <= 0) && !BIO_should_retry(bio.get()))
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
-            return CResponse(CResponse::EStatus::CONN_ERROR);
-        }
-        else if (connectStatus == 0)
-        {
-            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
             return CResponse(CResponse::EStatus::TIMED_OUT);
         }
+
+        if (BIO_get_fd(bio.get(), &fd) < 0)
+        {
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't get socket file descriptor");
+            return CResponse(CResponse::EStatus::CONN_ERROR);
+        }
+
+        if (connectResult <= 0)
+        {
+            FD_ZERO(&confds);
+            FD_SET(fd, &confds);
+            timeval tv;
+            tv.tv_usec = 0;
+            tv.tv_sec = 10;
+            connectResult = select(fd + 1, NULL, &confds, NULL, &tv);
+            if (connectResult == 0)
+            {
+                CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
+                return CResponse(CResponse::EStatus::TIMED_OUT);
+            }
+        }
+        // End of @inspiredBy
+
+        // int connectStatus = BIO_do_connect_retry(bio.get(), 10, -1);
+        // if (connectStatus == -1)
+        // {
+        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
+        //     return CResponse(CResponse::EStatus::CONN_ERROR);
+        // }
+        // else if (connectStatus == 0)
+        // {
+        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
+        //     return CResponse(CResponse::EStatus::TIMED_OUT);
+        // }
 
         auto ssl_bio = unique_ptr<BIO, DeleterOf<BIO>>(BIO_new_ssl(m_Ctx.get(), 1));
         BIO_push(ssl_bio.get(), bio.release());
@@ -108,7 +141,8 @@ CResponse CHttpsDownloader::get(CURLHandler &url)
         }
 
         SSL *sslpointer = getSSL(ssl_bio.get());
-        verifyCertificate(sslpointer, host.c_str());
+        if (!verifyCertificate(sslpointer, host.c_str()))
+            return CResponse(CResponse::EStatus::CONN_ERROR);
 
         sendHttpRequest(ssl_bio.get(), resource, host);
         return receiveHttpMessage(ssl_bio.get(), url);
@@ -125,17 +159,51 @@ CResponse CHttpsDownloader::get(CURLHandler &url)
 
         BIO_set_nbio(bio.get(), 1);
 
-        int connectStatus = BIO_do_connect_retry(bio.get(), 10, -1);
-        if (connectStatus == -1)
+        // Socket connection fold old OpenSSL version
+        // @inspiredBy https://stackoverflow.com/a/39060166
+        int connectResult = BIO_do_connect(bio.get());
+        int fd;
+        fd_set confds;
+
+        if ((connectResult <= 0) && !BIO_should_retry(bio.get()))
         {
             CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
-            return CResponse(CResponse::EStatus::CONN_ERROR);
-        }
-        else if (connectStatus == 0)
-        {
-            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
             return CResponse(CResponse::EStatus::TIMED_OUT);
         }
+
+        if (BIO_get_fd(bio.get(), &fd) < 0)
+        {
+            CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't get socket file descriptor");
+            return CResponse(CResponse::EStatus::CONN_ERROR);
+        }
+
+        if (connectResult <= 0)
+        {
+            FD_ZERO(&confds);
+            FD_SET(fd, &confds);
+            timeval tv;
+            tv.tv_usec = 0;
+            tv.tv_sec = 10;
+            connectResult = select(fd + 1, NULL, &confds, NULL, &tv);
+            if (connectResult == 0)
+            {
+                CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
+                return CResponse(CResponse::EStatus::TIMED_OUT);
+            }
+        }
+        // End of @inspiredBy
+
+        // int connectStatus = BIO_do_connect_retry(bio.get(), 10, -1);
+        // if (connectStatus == -1)
+        // {
+        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, error occured!");
+        //     return CResponse(CResponse::EStatus::CONN_ERROR);
+        // }
+        // else if (connectStatus == 0)
+        // {
+        //     CLogger::getInstance().log(CLogger::LogLevel::Error, "Can't connect, timed out!");
+        //     return CResponse(CResponse::EStatus::TIMED_OUT);
+        // }
 
         sendHttpRequest(bio.get(), resource, host);
         return receiveHttpMessage(bio.get(), url);
@@ -232,8 +300,9 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
 
         if (key == "Content-Length")
         {
-            std::stringstream sstream(value);
-            sstream >> response.m_ContentLength;
+            // std::stringstream sstream(value);
+            // sstream >> response.m_ContentLength;
+            response.m_ContentLength = std::stoi(value);
         }
 
         if (key == "Location")
@@ -259,7 +328,11 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
     {
         string newData = receiveData(bio);
 
-        if (body.length() >= response.m_ContentLength || newData.length() <= 0)
+        if (response.m_ContentLength != -1)
+            if (body.length() >= static_cast<size_t>(response.m_ContentLength))
+                break;
+
+        if (newData.length() <= 0)
             break;
 
         body += newData;
@@ -306,36 +379,36 @@ SSL *CHttpsDownloader::getSSL(BIO *bio)
     return ssl;
 }
 
-void CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string &expectedHostname)
+bool CHttpsDownloader::verifyCertificate(SSL *ssl, const std::string &expectedHostname)
 {
-    int error = SSL_get_verify_result(ssl);
+    int result = SSL_get_verify_result(ssl);
 
-    if (error != X509_V_OK)
+    if (result != X509_V_OK)
     {
-        const char *message = X509_verify_cert_error_string(error);
-        CLogger::getInstance().log(CLogger::LogLevel::Error, "Certificate verification error: " + string(message) + " - " + std::to_string(error));
-        //! throw
+        const char *message = X509_verify_cert_error_string(result);
+        CLogger::getInstance().log(CLogger::LogLevel::Error, "Certificate verification error: " + string(message) + " - " + std::to_string(result));
+        return false;
     }
 
-    X509 *cert = SSL_get_peer_certificate(ssl);
+    auto cert = unique_ptr<X509, DeleterOf<X509>>(SSL_get_peer_certificate(ssl));
 
-    if (cert == nullptr)
+    if (cert.get() == nullptr)
     {
         CLogger::getInstance().log(CLogger::LogLevel::Error, "No certificate was presented by the server!");
-        //! throw
+        return false;
     }
-
-    X509_free(cert);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (X509_check_host(cert, expectedHostname.data(), expectedHostname.size(), 0, nullptr) != 1)
     {
         CLogger::getInstance().log(CLogger::LogLevel::Error, "Certificate verification error in X509_check_host");
-        //! throw
+        return false;
     }
 #else
     // X509_check_host is called automatically during verification,
     // because we set it up in main().
     (void)expectedHostname;
 #endif
+
+    return true;
 }
