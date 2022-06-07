@@ -45,7 +45,7 @@ public:
 
     void setStatusCode(int statusCode);
 
-    size_t m_ContentLength = 0;
+    int m_ContentLength = -1;
     CURLHandler m_MovedUrl;
 
 private:
