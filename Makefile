@@ -10,7 +10,7 @@ OBJS_DIR	:= $(BUILD_DIR)/objs
 DEPS_DIR	:= $(BUILD_DIR)/deps
 
 # Binary target file
-TARGET		:= $(BUILD_DIR)/wget.out
+TARGET		:= cernyj87
 
 # Compiler and linker settings
 CXX			:= g++
@@ -28,32 +28,36 @@ DEPS		:= $(patsubst %,$(DEPS_DIR)/%.d,$(notdir $(basename $(SOURCES))))
 # -------------- Entry points ----------------------
 
 # Main entry
-all: build doc
+all: compile doc
 
 # Help with targets
 .PHONY: help
 help:
-	@echo Available targets: all, build, clean, doc, tests, linecount
+	@echo Available targets: all, compile, clean, doc, tests, linecount
 
 # Main build
-.PHONY: build
-build: $(TARGET)
+.PHONY: compile
+compile: $(TARGET)
 
 # Build and run tests
 .PHONY: tests
-tests: tests_build
+tests: tests_compile
 	./$(TARGET)
 
-.PHONY: tests_build
-tests_build: CXXFLAGS += -DIS_TESTS
-tests_build: build;
+.PHONY: tests_compile
+tests_compile: CXXFLAGS += -DIS_TESTS
+tests_compile: compile;
 
 # Clean
 .PHONY: clean
 clean:
-	rm -rf $(OBJS_DIR) $(DEPS_DIR)
+	rm -rf $(BUILD_DIR)
+	rm -rf $(TARGET)
 	rm -rf doc
-	rm -rf output
+
+.PHONY: run
+run:
+	./$(TARGET) -h
 
 
 # -------------- Building and linking --------------
