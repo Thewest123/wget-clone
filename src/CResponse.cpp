@@ -13,55 +13,6 @@ using std::stringstream;
 CResponse::CResponse(EStatus status)
     : m_Status(status) {}
 
-void CResponse::setContentType(const string &contentType)
-{
-    m_ContentType = contentType;
-}
-
-void CResponse::setContentDisposition(const string &contentDisposition)
-{
-    m_ContentDisposition = contentDisposition;
-}
-
-void CResponse::setBody(const string &body)
-{
-    m_Body = body;
-}
-
-CResponse::EStatus CResponse::getStatus()
-{
-    return m_Status;
-}
-
-string CResponse::getBody()
-{
-    return m_Body;
-}
-
-void CResponse::setStatus(EStatus status)
-{
-    m_Status = status;
-}
-
-void CResponse::setStatusCode(int statusCode)
-{
-    m_StatusCode = statusCode;
-}
-
-void CResponse::setLastModified(const string &lastModified)
-{
-    std::tm t{};
-    std::istringstream ss(lastModified);
-
-    ss >> std::get_time(&t, "%a, %d %b %Y %H:%M:%S");
-    if (ss.fail())
-    {
-        throw std::runtime_error{"Failed to parse LastModified date!"};
-    }
-
-    m_LastModified = mktime(&t);
-}
-
 void CResponse::setMovedUrl(const string &location, CURLHandler currentUrl)
 {
     string newLocation = location;

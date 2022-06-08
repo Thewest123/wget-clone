@@ -5,6 +5,12 @@
  *
  */
 
+#include "CFileHtml.h"
+#include "CFileCss.h"
+#include "CLogger.h"
+#include "CConfig.h"
+#include "Utils.h"
+
 #include <stdlib.h>
 #include <iostream>
 #include <set>
@@ -14,12 +20,6 @@
 
 #include <memory> // shared_ptr<>
 #include <string>
-
-#include "CFileHtml.h"
-#include "CFileCss.h"
-#include "CLogger.h"
-#include "CConfig.h"
-#include "Utils.h"
 
 using std::string, std::stringstream, std::regex, std::regex_replace, std::set, std::endl, std::make_shared, std::ifstream, std::ofstream;
 namespace fs = std::filesystem;
@@ -59,7 +59,7 @@ bool CFileHtml::download()
         return false;
     }
 
-    CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Downloading HTML: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
+    CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Processing HTML: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
 
     prepareRootUrls();
 
@@ -132,249 +132,99 @@ void CFileHtml::makeRelativeImagesExternal()
     m_Content = regex_replace(m_Content, re, replaceString.str());
 }
 
-void CFileHtml::replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler)
-{
-    stringstream replaceString;
-
-    // Get relative path to root directory
-    for (size_t i = 0; i < m_Url.getPathDepth(); i++)
-    {
-        replaceString << "../";
-    }
-
-    string pathWithFixedFilename = linkUrlHandler.getNormFilePath();
-
-    // Remove query params (everything after '?') from filename
-    size_t filenameEndPos = string::npos;
-
-    if ((filenameEndPos = pathWithFixedFilename.find('?')) != string::npos)
-        pathWithFixedFilename = pathWithFixedFilename.substr(0, filenameEndPos);
-
-    // Get path to local external directory
-    replaceString << "__external/"
-                  << linkUrlHandler.getDomain()
-                  << "/"
-                  << pathWithFixedFilename;
-
-    Utils::replaceAll(m_Content, searchString, replaceString.str());
-
-    CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Replaced all '" + searchString + "' with '" + replaceString.str() + "'");
-}
-
 set<shared_ptr<CFile>> CFileHtml::parseFile()
 {
     set<shared_ptr<CFile>> nextFiles;
 
+    // RELATIVE links
     set<string> nextUrls;
 
-    try
+    // Get relative src= and href=
+    auto relSrcHrefs = getUrlsWithRegex("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", m_Content);
+    for (const auto &srcHref : relSrcHrefs)
     {
-        // Match everything in src= and href= that doesn't start with http or https
-        const regex re("(?:src=|href=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
-
-        std::sregex_iterator iter(m_Content.begin(), m_Content.end(), re);
-        std::sregex_iterator end;
-
-        while (iter != end)
+        // If remote images, skip them
+        if (static_cast<bool>(CConfig::getInstance()["remote_images"]))
         {
-            string value = (*iter)[1];
-            iter++;
-
-            if (static_cast<bool>(CConfig::getInstance()["remote_images"]))
-            {
-                if (Utils::endsWith(value, ".png") ||
-                    Utils::endsWith(value, ".jpg") ||
-                    Utils::endsWith(value, ".jpeg") ||
-                    Utils::endsWith(value, ".webp") ||
-                    Utils::endsWith(value, ".gif") ||
-                    Utils::endsWith(value, ".png"))
-                    continue;
-            }
-
-            nextUrls.insert(value);
+            if (Utils::endsWith(srcHref, ".png") ||
+                Utils::endsWith(srcHref, ".jpg") ||
+                Utils::endsWith(srcHref, ".jpeg") ||
+                Utils::endsWith(srcHref, ".webp") ||
+                Utils::endsWith(srcHref, ".gif") ||
+                Utils::endsWith(srcHref, ".png"))
+                continue;
         }
 
-        if (!static_cast<bool>(CConfig::getInstance()["remote_images"]))
+        nextUrls.emplace(srcHref);
+    }
+
+    // If NOT remote images, also get relative srcset=
+    if (!static_cast<bool>(CConfig::getInstance()["remote_images"]))
+    {
+        auto relSourcesets = getUrlsWithRegex("(?:srcset=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", m_Content);
+
+        // Get each sourceset tag
+        for (const auto &sourceset : relSourcesets)
         {
-            // Match everything in srcset=
-            const regex re2("(?:srcset=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
-
-            std::sregex_iterator iter2(m_Content.begin(), m_Content.end(), re2);
-            std::sregex_iterator end2;
-
-            while (iter2 != end2)
+            // Get each URL in one sourceset tag
+            auto sourcesetUrls = getUrlsWithRegex("([^\"'=\\s]+\\.[^\\s]+)", sourceset);
+            for (const auto &url : sourcesetUrls)
             {
-                string srcsetContent = (*iter2)[1];
-
-                // Match separately every link in srcset=
-                const regex re_srcset("[^\"'=\\s]+\\.[^\\s]+", std::regex_constants::icase);
-
-                std::sregex_iterator iter_srcset(srcsetContent.begin(), srcsetContent.end(), re_srcset);
-                std::sregex_iterator end_srcset;
-
-                while (iter_srcset != end_srcset)
-                {
-                    nextUrls.insert((*iter_srcset)[0]);
-                    iter_srcset++;
-                }
-
-                iter2++;
+                if (!Utils::startsWith(url, "/"))
+                    nextUrls.emplace(url);
             }
         }
     }
-    catch (std::regex_error &e)
-    {
-        CLogger::getInstance().log(CLogger::ELogLevel::Error, "Internal error in regex");
-    }
 
-    for (auto &&i : nextUrls)
-    {
-        string urlNoFilename = m_Url.getDomain();
-
-        // If next URL starts with a slash, it's relative to the root domain, no need to get previous path
-        if (!Utils::startsWith(i, "/"))
-        {
-            urlNoFilename = m_Url.getNormURL();
-
-            // Find position of the last slash
-            size_t filenameStart = urlNoFilename.find_last_of('/');
-
-            // If it exists and it's not the last slash (meaning theres a filename at the end, eg. index.html)
-            if (filenameStart != string::npos && filenameStart != urlNoFilename.length())
-            {
-                // Get only the path without filename
-                urlNoFilename = urlNoFilename.substr(0, filenameStart + 1);
-            }
-        }
-
-        CURLHandler newLink(urlNoFilename + i, m_Url.isExternal());
-
-        shared_ptr<CFile> newFile;
-
-        if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
-            newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
-        else if (Utils::endsWith(newLink.getNormURL(), ".css"))
-            newFile = make_shared<CFileCss>(m_HttpD, m_Depth, newLink);
-        else
-            newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
-
-        nextFiles.insert(newFile);
-        CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth + 1) + ")");
-    }
-
-    // ----------- External links ---------------
+    // Transform each URL to correct File and insert into nextFiles set
+    transformUrlsToFiles(false, nextUrls, nextFiles);
 
     // Skip external links if desired
     if (static_cast<bool>(CConfig::getInstance()["remote"]) == true)
         return nextFiles;
 
+    // EXTERNAL links
     set<string> nextUrlsExternal;
 
-    try
+    // Get external src= and href=
+    auto externSrcHrefs = getUrlsWithRegex("(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", m_Content);
+    for (const auto &srcHref : externSrcHrefs)
     {
-        // Match everything in src= and href= that DOES start with http or https
-        const regex re_external("(?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
-
-        std::sregex_iterator iter_external(m_Content.begin(), m_Content.end(), re_external);
-        std::sregex_iterator end_external;
-
-        while (iter_external != end_external)
+        // If remote images, skip them
+        if (static_cast<bool>(CConfig::getInstance()["remote_images"]))
         {
-            string value = (*iter_external)[1];
-            iter_external++;
-
-            if (static_cast<bool>(CConfig::getInstance()["remote_images"]))
-            {
-                if (Utils::endsWith(value, ".png") ||
-                    Utils::endsWith(value, ".jpg") ||
-                    Utils::endsWith(value, ".jpeg") ||
-                    Utils::endsWith(value, ".webp") ||
-                    Utils::endsWith(value, ".gif") ||
-                    Utils::endsWith(value, ".png"))
-                    continue;
-            }
-
-            nextUrls.insert(value);
+            if (Utils::endsWith(srcHref, ".png") ||
+                Utils::endsWith(srcHref, ".jpg") ||
+                Utils::endsWith(srcHref, ".jpeg") ||
+                Utils::endsWith(srcHref, ".webp") ||
+                Utils::endsWith(srcHref, ".gif") ||
+                Utils::endsWith(srcHref, ".png"))
+                continue;
         }
 
-        if (!static_cast<bool>(CConfig::getInstance()["remote_images"]))
+        nextUrlsExternal.emplace(srcHref);
+    }
+
+    // Get external srcset=
+    if (!static_cast<bool>(CConfig::getInstance()["remote_images"]))
+    {
+        auto relSourcesets = getUrlsWithRegex("(?:srcset=)[\"'](?!http:\\/\\/|https:\\/\\/|data:|tel:|javascript:|mailto:|\\/\\/)([^\"'#]*)(#?[^\"']*)[\"']", m_Content);
+
+        // Get each sourceset tag
+        for (const auto &sourceset : relSourcesets)
         {
-            // Match everything in src= and href= that DOES start with http or https
-            const regex re_external_imgs("(?:img) (?:src=|href=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
-
-            std::sregex_iterator iter_external_imgs(m_Content.begin(), m_Content.end(), re_external_imgs);
-            std::sregex_iterator end_external_imgs;
-
-            while (iter_external_imgs != end_external_imgs)
+            // Get each URL in one sourceset tag
+            auto sourcesetUrls = getUrlsWithRegex("([^\"'=\\s]+\\.[^\\s]+)", sourceset);
+            for (const auto &url : sourcesetUrls)
             {
-                nextUrlsExternal.insert((*iter_external_imgs)[1]);
-                iter_external_imgs++;
-            }
-
-            // Match everything in srcset=
-            const regex re2("(?:srcset=)[\"']((?:http:\\/\\/|https:\\/\\/)[^\"'#]*)(#?[^\"']*)[\"']", std::regex_constants::icase);
-
-            std::sregex_iterator iter2(m_Content.begin(), m_Content.end(), re2);
-            std::sregex_iterator end2;
-
-            while (iter2 != end2)
-            {
-                string srcsetContent = (*iter2)[1];
-
-                // Match separately every link in srcset=
-                const regex re_srcset("[^\"'=\\s]+\\.[^\\s]+", std::regex_constants::icase);
-
-                std::sregex_iterator iter_srcset(srcsetContent.begin(), srcsetContent.end(), re_srcset);
-                std::sregex_iterator end_srcset;
-
-                while (iter_srcset != end_srcset)
-                {
-                    nextUrls.insert((*iter_srcset)[0]);
-                    iter_srcset++;
-                }
-
-                iter2++;
+                if (!Utils::startsWith(url, "/"))
+                    nextUrlsExternal.emplace(url);
             }
         }
     }
-    catch (std::regex_error &e)
-    {
-        CLogger::getInstance().log(CLogger::ELogLevel::Error, "Internal error in regex");
-    }
 
-    for (auto &&i : nextUrlsExternal)
-    {
-        CURLHandler newLink(i, true);
-
-        // Skip if we are referencing ourselves
-        CURLHandler mainPageUrl(static_cast<string>(CConfig::getInstance()["url"]));
-        if (newLink.getDomain() == mainPageUrl.getDomain())
-            continue;
-
-        // Skip if URL is not in limited links, if specified
-        string domainsList = static_cast<string>(CConfig::getInstance()["limit"]);
-
-        if (!domainsList.empty() && !Utils::contains(domainsList, newLink.getDomain()))
-        {
-            CLogger::getInstance().log(CLogger::ELogLevel::Info, "Skipping link due to limit: " + newLink.getNormURL());
-            continue;
-        }
-
-        shared_ptr<CFile> newFile;
-
-        if (Utils::endsWith(newLink.getNormURL(), ".html") || Utils::endsWith(newLink.getNormURL(), ".php") || Utils::endsWith(newLink.getNormURL(), "/"))
-            newFile = make_shared<CFileHtml>(m_HttpD, m_Depth + 1, newLink);
-        else if (Utils::endsWith(newLink.getNormURL(), ".css"))
-            newFile = make_shared<CFileCss>(m_HttpD, m_Depth + 1, newLink);
-        else
-            newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
-
-        nextFiles.insert(newFile);
-        CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Next EXTERNAL file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth + 1) + ")");
-
-        if (static_cast<int>(m_Depth) + 1 <= static_cast<int>(CConfig::getInstance()["depth"]))
-            replaceExternalWithLocal(i, newLink);
-    }
+    // Transform each URL to correct File and insert into nextFiles set
+    transformUrlsToFiles(true, nextUrlsExternal, nextFiles);
 
     return nextFiles;
 }

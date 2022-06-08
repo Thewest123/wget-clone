@@ -38,20 +38,19 @@ int main(int argc, char const *argv[])
     CURLHandler rootUrl((string)cfg["url"]);
 
     // Create root HTML file
-    // CFileHtml root(httpd, 1, rootUrl);
-    shared_ptr<CFile> root;
+    shared_ptr<CFile> rootFile;
 
     if (Utils::endsWith(rootUrl.getNormURL(), ".html") || Utils::endsWith(rootUrl.getNormURL(), ".php") || Utils::endsWith(rootUrl.getNormURL(), "/"))
-        root = make_shared<CFileHtml>(httpd, 1, rootUrl);
+        rootFile = make_shared<CFileHtml>(httpd, 1, rootUrl);
     else if (Utils::endsWith(rootUrl.getNormURL(), ".css"))
-        root = make_shared<CFileCss>(httpd, 1, rootUrl);
+        rootFile = make_shared<CFileCss>(httpd, 1, rootUrl);
     else
-        root = make_shared<CFile>(httpd, 1, rootUrl);
+        rootFile = make_shared<CFile>(httpd, 1, rootUrl);
 
     // Download the file and recursively other linked files
     try
     {
-        root.get()->download();
+        rootFile->download();
     }
     catch (std::exception &e)
     {

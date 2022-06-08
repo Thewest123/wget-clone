@@ -207,6 +207,8 @@ bool CConfig::parseArgs(int argc, char const *argv[])
         {
             if (!setWithNext("log_file", i, argc, argv))
                 return false;
+
+            logger.setToFile((*this)["log_file"]);
         }
 
         else if (value == "-c" || value == "--cookie")

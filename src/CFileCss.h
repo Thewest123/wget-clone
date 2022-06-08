@@ -64,12 +64,6 @@ private:
     void prepareRootUrls();
 
     /**
-     * @brief Replace external link like "https://google.com/index.html" with relative local link like "../../__external/google.com/index.html"
-     *
-     */
-    void replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler);
-
-    /**
      * @brief Insert ASCII art with project link to the end of CSS file
      *
      */

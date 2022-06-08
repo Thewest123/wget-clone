@@ -9,7 +9,6 @@
 #include "CLogger.h"
 #include "CConfig.h"
 #include "Utils.h"
-#include "CURLHandler.h"
 
 using std::unique_ptr, std::regex, std::smatch, std::regex_match, std::stringstream;
 
@@ -217,7 +216,7 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
     int statusCode = std::stoi(result[1].str());
 
     CResponse response(CResponse::EStatus::IN_PROGRESS);
-    response.setStatusCode(statusCode);
+    response.m_StatusCode = statusCode;
 
     // Parse other headers
     for (const string &line : headers)
@@ -237,18 +236,15 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
             response.setMovedUrl(value, currentUrl);
 
         if (key == "Content-Type")
-            response.setContentType(value);
+            response.m_ContentType = value;
 
         if (key == "Content-Disposition")
-            response.setContentDisposition(value);
-
-        if (key == "Last-Modified")
-            response.setLastModified(value);
+            response.m_ContentDisposition = value;
     }
 
     // If finished, don't download body (eg. 404 or 301 etc occured)
-    if (response.getStatus() == CResponse::EStatus::FINISHED ||
-        response.getStatus() == CResponse::EStatus::MOVED)
+    if (response.m_Status == CResponse::EStatus::FINISHED ||
+        response.m_Status == CResponse::EStatus::MOVED)
         return response;
 
     // Read data if possible
@@ -268,8 +264,8 @@ CResponse CHttpsDownloader::receiveHttpMessage(BIO *bio, CURLHandler &currentUrl
         body += newData;
     }
 
-    response.setStatus(CResponse::EStatus::FINISHED);
-    response.setBody(body);
+    response.m_Status = CResponse::EStatus::FINISHED;
+    response.m_Body = body;
 
     return response;
 }

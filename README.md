@@ -22,21 +22,21 @@ Kde lze využít polymorfismus? (doporučené)
    - Styl procházení: BFS, DFS, HTML pages first (přednost HTML stránky před obrázky), ...
  
  
-## ROZŠÍŘENÍ ZADÁNÍ
+## ROZŠÍŘENÍ ZADÁNÍ (Checkpoint)
  
 Bude se jednat o command line utilitu, která bude implementovat základní chování nástroje wget. Jako parametr bude přijímat adresu HTTP stránky, kterou chceme naklonovat. Dalšími parametry lze nástroj více konfigurovat, například:
 
    - hloubka stahování
    - zpracování obrázků (nechat původní URL / přepsat na lokální URL)
-   - zpracování hlubších souborů (nechat původní URL / přepsat na URL lokálníhoerror souboru)
+   - zpracování hlubších souborů (nechat původní URL / přepsat na URL lokálního error souboru)
    - přidání hlavičkových parametrů (např. pokud bychom chtěli vložit cookie sauth-tokenem)
    - cesta výstupního adresáře
    - úroveň logování (verbose, info, error aj.), případně cesta k log souboru
    - načtení konfigurace ze souboru
 
 #### Třída HttpDownloader
-   - bude využita pro samotné připojení k serveru a stažení požadovaného souboru   pomocí Http GET
-   - metoda setHeader() umožní upravit header GET požadavku (nastavit cookies či   další parametry)
+   - bude využita pro samotné připojení k serveru a stažení požadovaného souboru pomocí Http GET
+   - metoda setHeader() umožní upravit header GET požadavku (nastavit cookies či další parametry)
    - metoda get() stáhne soubor a uloží na disk
  
 #### Třída Config
@@ -69,3 +69,19 @@ Polymorfismus bude využit na různé druhy stahovaných souborů. Každý zdroj
     - Volá svoje zpracování staženého CSS souboru
     - Provede úpravy (pokud jsou nutné) a rekurzivně zavolá stahování dalších URL
   - Má další svoje metody, např. na parse()
+
+
+## AKTUÁLNÍ IMPLEMENTACE
+
+#### HttpDownloader
+  - Změněn na HttpsDownloader s podporou SSL připojení a verifikací certifikátů
+  - S neblokujícími sockety
+  - Ukládání souboru na disk řeší nově CFile
+  - Metoda setHeader() nevyužita, nastavení se bere rovnou z Config třídy
+
+#### Config
+  - Obsahuje další parametry navíc
+  - Chybí načítání ze souboru
+
+#### CFile
+  - Polymorfismus využit dle checkpointu

@@ -55,9 +55,10 @@ clean:
 	rm -rf $(TARGET)
 	rm -rf doc
 
+# Run target
 .PHONY: run
 run:
-	./$(TARGET) -h
+	./$(TARGET)
 
 
 # -------------- Building and linking --------------
@@ -97,18 +98,3 @@ doc/index.html: Doxyfile assets/docs_files/* $(SOURCES) $(HEADERS)
 .PHONY: linecount
 linecount:
 	wc -l $(SOURCES) $(HEADERS) Makefile
-
-# run program with valgrind for errors
-.PHONY: valgrind
-valgrind: $(TARGET)
-	valgrind ./$(TARGET)
-
-# run program with valgrind for leak checks
-.PHONY: valgrind_leakcheck
-valgrind_leakcheck: $(TARGET)
-	valgrind --leak-check=full ./$(TARGET)
-
-# run program with valgrind for leak checks (extreme)
-.PHONY: valgrind_extreme
-valgrind_extreme: $(TARGET)
-	valgrind --leak-check=full --show-leak-kinds=all --leak-resolution=high --track-origins=yes --vgdb=yes ./$(TARGET)
