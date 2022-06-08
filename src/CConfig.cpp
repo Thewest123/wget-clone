@@ -1,7 +1,7 @@
 /**
  * @file CConfig.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Config singleton class to parse, store, and provide config values to other parts of the program
+ * @brief Implementation of CConfig
  *
  */
 
@@ -123,7 +123,7 @@ bool CConfig::parseArgs(int argc, char const *argv[])
     // Check args count
     if (argc < 2)
     {
-        logger.log(CLogger::LogLevel::Error, "Too few arguments!");
+        logger.log(CLogger::ELogLevel::Error, "Too few arguments!");
         printHelp(argv[0]);
         return false;
     }
@@ -135,7 +135,7 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         if (value == "-h" || value == "--help")
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: Read Help argument");
+            logger.log(CLogger::ELogLevel::Verbose, "Config: Read Help argument");
             printHelp(argv[0]);
             return false;
         }
@@ -149,11 +149,11 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
             if (value.find_first_not_of("0123456789") != string::npos)
             {
-                logger.log(CLogger::LogLevel::Error, "Depth value is not a valid number!");
+                logger.log(CLogger::ELogLevel::Error, "Depth value is not a valid number!");
                 return false;
             }
 
-            logger.log(CLogger::LogLevel::Verbose, "Config: depth = " + value);
+            logger.log(CLogger::ELogLevel::Verbose, "Config: depth = " + value);
             (*this)["depth"] = value;
         }
 
@@ -165,19 +165,19 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-r" || value == "--remote")
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: remote = true");
+            logger.log(CLogger::ELogLevel::Verbose, "Config: remote = true");
             (*this)["remote"] = true;
         }
 
         else if (value == "-R" || value == "--remote-images")
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: remote_images = true");
+            logger.log(CLogger::ELogLevel::Verbose, "Config: remote_images = true");
             (*this)["remote_images"] = true;
         }
 
         else if (value == "-e" || value == "--error-page")
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: error_page = true");
+            logger.log(CLogger::ELogLevel::Verbose, "Config: error_page = true");
             (*this)["error_page"] = true;
         }
 
@@ -189,18 +189,18 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "-v" || value == "--verbose")
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: log_level = verbose");
+            logger.log(CLogger::ELogLevel::Verbose, "Config: log_level = verbose");
             (*this)["log_level"] = 0;
 
-            logger.setLevel(CLogger::LogLevel::Verbose);
+            logger.setLevel(CLogger::ELogLevel::Verbose);
         }
 
         else if (value == "-q" || value == "--quiet")
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: log_level = error");
+            logger.log(CLogger::ELogLevel::Verbose, "Config: log_level = error");
             (*this)["log_level"] = 2;
 
-            logger.setLevel(CLogger::LogLevel::Error);
+            logger.setLevel(CLogger::ELogLevel::Error);
         }
 
         else if (value == "-L" || value == "--log-file")
@@ -229,26 +229,26 @@ bool CConfig::parseArgs(int argc, char const *argv[])
 
         else if (value == "--disable-annoying-advertisement-that-nobody-wants-to-see")
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: advertisement = false");
+            logger.log(CLogger::ELogLevel::Verbose, "Config: advertisement = false");
             (*this)["advertisement"] = false;
         }
 
         else if (value != "" && !Utils::startsWith(value, "-"))
         {
-            logger.log(CLogger::LogLevel::Verbose, "Config: url = " + value);
+            logger.log(CLogger::ELogLevel::Verbose, "Config: url = " + value);
             (*this)["url"] = value;
         }
 
         else
         {
-            logger.log(CLogger::LogLevel::Error, "Unknown argument: " + value);
+            logger.log(CLogger::ELogLevel::Error, "Unknown argument: " + value);
             return false;
         }
     }
 
     if ((string)((*this)["url"]) == "")
     {
-        logger.log(CLogger::LogLevel::Error, "No URL provided!");
+        logger.log(CLogger::ELogLevel::Error, "No URL provided!");
         return false;
     }
 
@@ -262,7 +262,7 @@ bool CConfig::setWithNext(const string &configName, int &currentArg, int argc, c
 
     string value = argv[currentArg];
 
-    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Config: " + configName + " = " + value);
+    CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Config: " + configName + " = " + value);
     (*this)[configName] = value;
 
     return true;
@@ -274,52 +274,52 @@ CConfig &CConfig::getInstance()
     return instance;
 }
 
-CConfig::Setting &CConfig::operator[](const string &key)
+CConfig::TSetting &CConfig::operator[](const string &key)
 {
     // If key already exists, return setting
     if (m_Settings.find(key) != m_Settings.end())
         return m_Settings.find(key)->second;
 
     // Otherwise insert new empty setting
-    m_Settings.insert(pair<string, Setting>(key, Setting("")));
+    m_Settings.insert(pair<string, TSetting>(key, TSetting("")));
     return m_Settings.find(key)->second;
 }
 
-CConfig::Setting::Setting() = default;
+CConfig::TSetting::TSetting() = default;
 
-CConfig::Setting::Setting(const string &value)
+CConfig::TSetting::TSetting(const string &value)
     : m_Value(value) {}
 
 // Get values
-CConfig::Setting::operator bool() const
+CConfig::TSetting::operator bool() const
 {
     return (m_Value == "true") ? true : false;
 }
 
-CConfig::Setting::operator int() const
+CConfig::TSetting::operator int() const
 {
     return stoi(m_Value);
 }
 
-CConfig::Setting::operator string() const
+CConfig::TSetting::operator string() const
 {
     return m_Value;
 }
 
 // Set values
-CConfig::Setting &CConfig::Setting::operator=(bool value)
+CConfig::TSetting &CConfig::TSetting::operator=(bool value)
 {
     m_Value = value ? "true" : "false";
     return *this;
 }
 
-CConfig::Setting &CConfig::Setting::operator=(int value)
+CConfig::TSetting &CConfig::TSetting::operator=(int value)
 {
     m_Value = std::to_string(value);
     return *this;
 }
 
-CConfig::Setting &CConfig::Setting::operator=(const string &value)
+CConfig::TSetting &CConfig::TSetting::operator=(const string &value)
 {
     m_Value = value;
     return *this;

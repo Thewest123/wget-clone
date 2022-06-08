@@ -1,7 +1,7 @@
 /**
  * @file Utils.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Namespace "Utils" containing various functions that were repeatedly used, mainly to simplify working with strings
+ * @brief Header for Utils namespace
  *
  */
 
@@ -11,6 +11,10 @@
 #include <algorithm>
 #include <vector>
 
+/**
+ * @brief Namespace "Utils" containing various functions that were repeatedly used, mainly to simplify working with strings
+ *
+ */
 namespace Utils
 {
     /**

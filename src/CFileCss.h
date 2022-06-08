@@ -1,6 +1,7 @@
 /**
  * @file CFileCss.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Header file for CFileCss
  */
 
 #pragma once
@@ -17,6 +18,10 @@
 
 using std::set, std::shared_ptr, std::string;
 
+/**
+ * @brief Polymorphic derived class that also parses the CSS document and recursively downloads subsequent files
+ *
+ */
 class CFileCss : public CFile
 {
 public:
@@ -51,7 +56,7 @@ private:
     set<shared_ptr<CFile>> parseFile();
 
     /**
-     * @brief Preproccess the Css source code - replace absolute paths with relative paths
+     * @brief Preproccess the CSS source code - replace absolute paths with relative paths
      *
      * For example: url("/assets/main.css") may become url("../../assets/main.css")
      *
@@ -65,7 +70,7 @@ private:
     void replaceExternalWithLocal(const string &searchString, const CURLHandler &linkUrlHandler);
 
     /**
-     * @brief Insert ASCII art with project link to the end of Css file
+     * @brief Insert ASCII art with project link to the end of CSS file
      *
      */
     void insertAnnoyingAdvertisementThatNobodyWantsToSee();

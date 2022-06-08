@@ -50,7 +50,7 @@ void CResponse::setStatusCode(int statusCode)
 
 void CResponse::setLastModified(const string &lastModified)
 {
-    std::tm t;
+    std::tm t{};
     std::istringstream ss(lastModified);
 
     ss >> std::get_time(&t, "%a, %d %b %Y %H:%M:%S");
@@ -64,24 +64,17 @@ void CResponse::setLastModified(const string &lastModified)
 
 void CResponse::setMovedUrl(const string &location, CURLHandler currentUrl)
 {
+    string newLocation = location;
+
     if (m_StatusCode == 301)
-    {
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "301 Moved Permanently - New location: " + location);
+        CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "301 Moved Permanently - New location: " + newLocation);
 
-        CURLHandler newUrl(location);
-
-        if (CURLHandler(static_cast<string>(CConfig::getInstance()["url"])).getDomainNorm() != newUrl.getDomainNorm())
-            m_MovedUrl = CURLHandler(location, true);
-        else
-            m_MovedUrl = CURLHandler(location, currentUrl.isExternal());
-    }
     else if (m_StatusCode == 302)
     {
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "302 Found - New location: " + location);
+        CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "302 Found - New location: " + newLocation);
 
         // If the URL is not full, but only relative to domain, prepend it with domain
-        string newLocation;
-        if (Utils::startsWith(location, "/"))
+        if (Utils::startsWith(newLocation, "/"))
         {
             stringstream ss;
             if (currentUrl.isHttps())
@@ -94,18 +87,18 @@ void CResponse::setMovedUrl(const string &location, CURLHandler currentUrl)
 
             newLocation = ss.str();
         }
+
         else
-        {
             newLocation = location;
-        }
-
-        CURLHandler newUrl(newLocation);
-
-        if (CURLHandler(static_cast<string>(CConfig::getInstance()["url"])).getDomainNorm() != newUrl.getDomainNorm())
-            m_MovedUrl = CURLHandler(newLocation, true);
-        else
-            m_MovedUrl = CURLHandler(newLocation, currentUrl.isExternal());
     }
 
+    CURLHandler newUrl(newLocation);
+
+    if (CURLHandler(static_cast<string>(CConfig::getInstance()["url"])).getDomainNorm() != newUrl.getDomainNorm())
+        newUrl.setExternal(true);
+    else
+        newUrl.setExternal(currentUrl.isExternal());
+
+    m_MovedUrl = newUrl;
     m_Status = EStatus::MOVED;
 }

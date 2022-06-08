@@ -1,7 +1,7 @@
 /**
  * @file CHttpsDownloader.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Class that interacts through sockets with web server, makes SSL handshake and validates certificates, downloads content and parses headers
+ * @brief Header file for CHttpsDownloader, also contains TDeleter
  *
  */
 
@@ -43,39 +43,42 @@ using std::string, std::vector, std::unique_ptr;
 // but thoroughly modified to use STL functions and types instead of C functions, to fix memory leaks, and rewritten to use non-blocking sockets
 
 template <typename T>
-struct DeleterOf;
+/**
+ * @brief Templated deleter struct for unique_ptr
+ *
+ */
+struct TDeleter;
 
 template <>
-struct DeleterOf<BIO>
+struct TDeleter<BIO>
 {
     void operator()(BIO *p) const { BIO_free_all(p); }
 };
 
 template <>
-struct DeleterOf<SSL_CTX>
+struct TDeleter<SSL_CTX>
 {
     void operator()(SSL_CTX *p) const { SSL_CTX_free(p); }
 };
 
 template <>
-struct DeleterOf<X509>
+struct TDeleter<X509>
 {
     void operator()(X509 *p) const { X509_free(p); }
 };
 
+/**
+ * @brief Class that interacts through sockets with web server, makes SSL handshake and validates certificates, downloads content and parses headers
+ *
+ */
 class CHttpsDownloader
 {
 public:
-    CHttpsDownloader();
-    //~CHttpsDownloader();
-
     /**
-     * @brief Makes GET request to the URL and returns content
+     * @brief Construct a new CHttpsDownloader object, init OpenSSL, load SSL trust store
      *
-     * @param url CURLHandler url of the remote file
-     * @return string Content of the downloaded file
      */
-    // string get(CURLHandler &url);
+    CHttpsDownloader();
 
     /**
      * @brief Makes GET request to the URL and returns content
@@ -95,21 +98,11 @@ private:
     string receiveData(BIO *bio);
 
     /**
-     * @brief Splits the header by each line
-     *
-     * @param header
-     * @return vector<string>
-     */
-    vector<string> splitHeaders(const string &header);
-
-    /**
      * @brief Gets data from BIO, validates response, parses headers
-     *
-     * Calls another 'get' if necessary (HTTP 301 Moved, etc.)
      *
      * @param bio
      * @param currentUrl
-     * @return string
+     * @return CResponse
      */
     CResponse receiveHttpMessage(BIO *bio, CURLHandler &currentUrl);
 
@@ -123,7 +116,7 @@ private:
     void sendHttpRequest(BIO *bio, const string &resource, const string &host);
 
     /**
-     * @brief Transforms the provided BIO to use SSL
+     * @brief Extract SSL certificate from SSL BIO
      *
      * @param bio Pointer to BIO object
      * @return SSL*
@@ -131,7 +124,7 @@ private:
     SSL *getSSL(BIO *bio);
 
     /**
-     * @brief Verifies validity of the SSL certificate for provided hostname
+     * @brief Verify validity of the SSL certificate for provided hostname
      *
      * @param ssl Pointer to the SSL certificate
      * @param expectedHostname Hostname for verification
@@ -144,7 +137,7 @@ private:
      * @brief Pointer to the SSL context
      *
      */
-    unique_ptr<SSL_CTX, DeleterOf<SSL_CTX>> m_Ctx;
+    unique_ptr<SSL_CTX, TDeleter<SSL_CTX>> m_Ctx;
 
     const string HTTP_PORT = "80";
     const string HTTPS_PORT = "443";

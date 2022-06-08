@@ -296,7 +296,7 @@ int main(void)
      // ============ CConfig ============
      cout << "------- [Testing CConfig] --------" << endl;
 
-     CLogger::init(CLogger::LogLevel::Error);
+     CLogger::init(CLogger::ELogLevel::Error);
      Tests::CConfig_storeValues();
      Tests::CConfig_getValues();
      Tests::CConfig_parseArgsMissingUrl();

@@ -1,15 +1,13 @@
 /**
  * @file CFile.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Polymorphic base class to download and store file content, and save it to disk
+ * @brief Header file for CFile
  *
  */
 
 #pragma once
 
-//#include "CHttpsDownloader.h"
-class CHttpsDownloader;
-
+#include "CHttpsDownloader.h"
 #include "CURLHandler.h"
 
 #include <stdlib.h>
@@ -17,11 +15,14 @@ class CHttpsDownloader;
 #include <filesystem>
 
 #include <memory> // shared_ptr<>
-#include <string> // string
+#include <string>
 
-// using namespace std;
 using std::string, std::shared_ptr;
 
+/**
+ * @brief Polymorphic base class to download and store file content, and save it to disk
+ *
+ */
 class CFile
 {
 public:
@@ -53,12 +54,9 @@ protected:
     shared_ptr<CHttpsDownloader> m_HttpD;
     size_t m_Depth;
     CURLHandler m_Url;
-    // string m_Host;
     string m_Filename;
-    // string m_Path;
     string m_OutputPath;
     string m_Content;
-    // bool m_IsExternal;
 
     /**
      * @brief Prepare the required folder structure
@@ -68,6 +66,7 @@ protected:
 
     /**
      * @brief Flush the File content to a file on disk
+     *
      * The m_Filename and m_OutputPath variables need to be set beforehand
      *
      * @return true

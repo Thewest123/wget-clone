@@ -1,7 +1,7 @@
 /**
  * @file CLogger.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Logger singleton class that provides various logging levels and basic interface to log messages to output or log file
+ * @brief Header file for CLogger
  *
  */
 
@@ -13,18 +13,34 @@
 
 using std::string, std::ofstream;
 
+/**
+ * @brief Logger singleton class that provides various logging levels and basic interface to log messages to output or log file
+ *
+ */
 class CLogger
 {
 public:
-    enum class LogLevel
+    /**
+     * @brief Log levels
+     *
+     */
+    enum class ELogLevel
     {
         Verbose,
         Info,
         Error
     };
 
+    /**
+     * @brief Disabled constructor because Logger without set level is not allowed
+     *
+     */
     CLogger() = delete;
 
+    /**
+     * @brief Destroy the CLogger object, close ofstream if needed
+     *
+     */
     ~CLogger();
 
     /**
@@ -32,7 +48,7 @@ public:
      *
      * @param logLevel Minimal level to log
      */
-    explicit CLogger(LogLevel logLevel);
+    explicit CLogger(ELogLevel logLevel);
 
     /**
      * @brief Set the logger to send next logs to file instead of terminal
@@ -44,17 +60,17 @@ public:
     /**
      * @brief Log a message
      *
-     * @param level LogLevel level of this message
+     * @param level ELogLevel level of this message
      * @param msg The message
      */
-    void log(const LogLevel level, const string &msg);
+    void log(const ELogLevel level, const string &msg);
 
     /**
      * @brief Set current log level
      *
      * @param level
      */
-    void setLevel(const LogLevel level);
+    void setLevel(const ELogLevel level);
 
     // Singleton stuff
     /**
@@ -62,7 +78,7 @@ public:
      *
      * @param level
      */
-    static void init(const LogLevel level);
+    static void init(const ELogLevel level);
 
     /**
      * @brief Get the the singleton instance
@@ -71,20 +87,33 @@ public:
      */
     static CLogger &getInstance();
 
+    /**
+     * @brief Disabled copy constructor because of CLogger being singleton
+     *
+     */
     CLogger(const CLogger &) = delete;
+
+    /**
+     * @brief Disabled operator= because of CLogger being singleton
+     *
+     */
     void operator=(const CLogger &) = delete;
 
 private:
-    static CLogger &getInstanceImpl(const LogLevel *level = nullptr);
+    static CLogger &getInstanceImpl(const ELogLevel *level = nullptr);
 
-    enum class LogType
+    /**
+     * @brief Type of the current Logger
+     *
+     */
+    enum class ELogType
     {
         Terminal,
         File
     };
 
-    LogLevel m_Level;
-    LogType m_Type;
+    ELogLevel m_Level;
+    ELogType m_Type;
     string m_FilePath;
     ofstream m_Ofs;
 

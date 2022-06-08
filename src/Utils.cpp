@@ -1,7 +1,7 @@
 /**
  * @file Utils.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Namespace "Utils" containing various functions that were repeatedly used, mainly to simplify working with strings
+ * @brief Implementation of Utils namespace functions
  *
  */
 
@@ -9,14 +9,13 @@
 
 #include <string>
 #include <algorithm>
-
 #include <iostream>
 
 std::string Utils::toLowerCase(const std::string &str)
 {
     std::string strLower = str;
 
-    // Transform to lowercase
+    // Transform to lowercase using lambda with unsigned char
     transform(strLower.begin(), strLower.end(), strLower.begin(),
               [](unsigned char c)
               {
@@ -55,18 +54,19 @@ size_t Utils::replaceAll(std::string &str, const std::string &what, const std::s
     if (what == str)
         throw std::invalid_argument("'what' argument cannot be equal to 'str'!");
 
+    // @inspiredBy https://stackoverflow.com/a/4643526
     while (true)
     {
-        /* Locate the substring to replace. */
+        // Locate the substring to replace
         index = str.find(what, index);
         if (index == std::string::npos)
             break;
 
-        /* Make the replacement. */
+        // Make the replacement
         size_t whatLength = what.length();
         str.replace(index, whatLength, to);
 
-        /* Advance index forward so the next iteration doesn't pick it up as well. */
+        // Advance index forward so the next iteration doesn't pick it up as well
         index += whatLength;
         count++;
     }

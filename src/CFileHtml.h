@@ -1,7 +1,7 @@
 /**
  * @file CFileHtml.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Polymorphic derived class that also parses the HTML document and recursively downloads subsequent files
+ * @brief Header file for CFileHtml
  *
  */
 
@@ -19,6 +19,10 @@
 
 using std::set, std::shared_ptr, std::string;
 
+/**
+ * @brief Polymorphic derived class that also parses the HTML document and recursively downloads subsequent files
+ *
+ */
 class CFileHtml : public CFile
 {
 public:

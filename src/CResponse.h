@@ -1,3 +1,10 @@
+/**
+ * @file CResponse.h
+ * @author Jan Cerny (cernyj87@fit.cvut.cz)
+ * @brief Header file for CResponse
+ *
+ */
+
 #pragma once
 
 #include "CURLHandler.h"
@@ -8,9 +15,17 @@
 
 using std::string;
 
+/**
+ * @brief Http Response class containing header info, content and status
+ *
+ */
 class CResponse
 {
 public:
+    /**
+     * @brief Status of CResponse (Not HTTP status) used for internal logic
+     *
+     */
     enum class EStatus
     {
         FINISHED,

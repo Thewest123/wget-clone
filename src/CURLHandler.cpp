@@ -1,11 +1,12 @@
 /**
  * @file CURLHandler.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief URL Handler to parse various URLs, append relative paths to existings URLs, and to provide normalized URLs and file paths
+ * @brief Implmentation of CURLHandler
  */
 
 #include "CURLHandler.h"
 #include "Utils.h"
+#include "CLogger.h"
 
 using std::regex, std::smatch, std::cout, std::endl, std::stringstream;
 
@@ -17,17 +18,12 @@ CURLHandler::CURLHandler(const string &url, bool isExternal)
 
     if (!regex_match(url, result, re))
     {
-        cout << "CURLHandler ERROR: Failed regex!" << endl;
-        //! throw
+        CLogger::getInstance().log(CLogger::ELogLevel::Error, "Failed to parse URL: " + url + "!");
         return;
     }
 
     setDomain(result[1].str());
     addPath(result[2].str());
-}
-
-CURLHandler::~CURLHandler()
-{
 }
 
 void CURLHandler::setDomain(const string &urlDomain)
@@ -94,31 +90,7 @@ void CURLHandler::addPath(const string &path)
 
 string CURLHandler::getNormFilePath() const
 {
-    vector<string> tempPath;
-
-    // Normalize path
-    for (auto &level : m_PathLevels)
-    {
-        // Move back one level
-        if (level == "..")
-        {
-            if (tempPath.size() > 0)
-                tempPath.pop_back();
-            // else
-            //     cout << "CURLHandler ERROR: Too much pop backs!" << endl;
-
-            continue;
-        }
-
-        // Skip redundant dots or empty levels
-        else if (level == "." || level.empty())
-        {
-            continue;
-        }
-
-        // Add level to path
-        tempPath.push_back(level);
-    }
+    vector<string> tempPath = getNormalizedLevels();
 
     // Build the final normalized path
     stringstream path;
@@ -149,17 +121,13 @@ vector<string> CURLHandler::getNormalizedLevels() const
         {
             if (tempPath.size() > 0)
                 tempPath.pop_back();
-            // else
-            //     cout << "CURLHandler ERROR: Too much pop backs!" << endl;
 
             continue;
         }
 
         // Skip redundant dots or empty levels
         else if (level == "." || level.empty())
-        {
             continue;
-        }
 
         // Add level to path
         tempPath.push_back(level);
@@ -221,21 +189,22 @@ bool CURLHandler::isExternal() const
     return m_IsExternal;
 }
 
+void CURLHandler::setExternal(bool isExternal)
+{
+    m_IsExternal = isExternal;
+}
+
 size_t CURLHandler::getPathDepth() const
 {
     auto levels = getNormalizedLevels();
 
     // If there is no path after domain name
     if ((levels.size() == 1 && levels.back() == "") || levels.size() <= 0)
-    {
         return 0;
-    }
 
     // If last element is a file (contains a dot)
     if (levels.back().find('.') != string::npos)
-    {
         return levels.size() - 1;
-    }
 
     return levels.size();
 }

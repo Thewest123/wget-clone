@@ -1,7 +1,7 @@
 /**
  * @file CURLHandler.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief URL Handler to parse various URLs, append relative paths to existings URLs, and to provide normalized URLs and file paths
+ * @brief Header file for CURLHandler
  */
 
 #pragma once
@@ -16,6 +16,10 @@
 // using namespace std;
 using std::string, std::vector;
 
+/**
+ * @brief URL Handler to parse various URLs, append relative paths to existings URLs, and to provide normalized URLs and file paths
+ *
+ */
 class CURLHandler
 {
 public:
@@ -27,12 +31,6 @@ public:
      * @param url Base URL of the CURLHandler, can be just domain or full URL
      */
     CURLHandler(const string &url, bool isExternal = false);
-
-    /**
-     * @brief Destroy the CURLHandler object
-     *
-     */
-    ~CURLHandler();
 
     /**
      * @brief Sets the domain URL and deducts protocol from 'urlDomain'
@@ -106,12 +104,26 @@ public:
      */
     bool isExternal() const;
 
+    /**
+     * @brief Set current URL to (not)external
+     *
+     * @param isExternal
+     */
+    void setExternal(bool isExternal);
+
 private:
     bool m_IsHttps = false;
     bool m_HasTrailingSlash = true;
-    string m_Domain;
-    vector<string> m_PathLevels;
     bool m_IsExternal = false;
+    string m_Domain;
+
+    /**
+     * @brief Vector of strings containing levels of path
+     *
+     * eg. URL path "../directory/file.html" is split into "..", "directory", "file.html"
+     *
+     */
+    vector<string> m_PathLevels;
 
     /**
      * @brief Returns m_PathLevels normalized, eg. won't include '../' etc.

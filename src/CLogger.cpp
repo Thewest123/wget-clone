@@ -1,7 +1,7 @@
 /**
  * @file CLogger.cpp
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Logger singleton class that provides various logging levels and basic interface to log messages to output or log file
+ * @brief Implementation of CLogger
  *
  */
 
@@ -16,7 +16,7 @@ using std::string, std::cout, std::endl, std::ofstream, std::stringstream;
 
 CLogger::~CLogger()
 {
-    if (m_Type == LogType::File)
+    if (m_Type == ELogType::File)
         m_Ofs.close();
 }
 
@@ -25,39 +25,34 @@ CLogger &CLogger::getInstance()
     return getInstanceImpl();
 }
 
-void CLogger::setLevel(const LogLevel level)
+void CLogger::setLevel(const ELogLevel level)
 {
     m_Level = level;
 }
 
-void CLogger::init(LogLevel level)
+void CLogger::init(ELogLevel level)
 {
     getInstanceImpl(&level);
 }
 
-CLogger &CLogger::getInstanceImpl(const CLogger::LogLevel *level)
+CLogger &CLogger::getInstanceImpl(const CLogger::ELogLevel *level)
 {
     static CLogger instance(*level);
     return instance;
 }
 
-CLogger::CLogger(LogLevel logLevel)
+CLogger::CLogger(ELogLevel logLevel)
     : m_Level(logLevel),
-      m_Type(CLogger::LogType::Terminal) {}
+      m_Type(CLogger::ELogType::Terminal) {}
 
 void CLogger::setToFile(const string &filePath)
 {
-    m_Type = LogType::File;
+    m_Type = ELogType::File;
     m_FilePath = filePath;
     m_Ofs = ofstream(m_FilePath, std::ios_base::app);
 }
 
-/**
- * @brief Log message in depending on level
- *
- * @param msg
- */
-void CLogger::log(const CLogger::LogLevel level, const string &msg)
+void CLogger::log(const CLogger::ELogLevel level, const string &msg)
 {
     if (level < m_Level)
         return;
@@ -66,11 +61,11 @@ void CLogger::log(const CLogger::LogLevel level, const string &msg)
 
     ss << "[";
 
-    if (level == LogLevel::Error)
+    if (level == ELogLevel::Error)
         ss << "ERROR";
-    else if (level == LogLevel::Info)
+    else if (level == ELogLevel::Info)
         ss << "INFO";
-    else if (level == LogLevel::Verbose)
+    else if (level == ELogLevel::Verbose)
         ss << "VERBOSE";
 
     ss << "] ("
@@ -81,17 +76,12 @@ void CLogger::log(const CLogger::LogLevel level, const string &msg)
     logToOutput(ss.str());
 }
 
-/**
- * @brief Print the message to COUT or FILE
- *
- * @param msg
- */
 void CLogger::logToOutput(const string &msg)
 {
-    if (m_Type == CLogger::LogType::Terminal)
+    if (m_Type == CLogger::ELogType::Terminal)
         cout << msg << endl;
 
-    else if (m_Type == CLogger::LogType::File)
+    else if (m_Type == CLogger::ELogType::File)
         m_Ofs << msg << endl;
 
     return;

@@ -1,7 +1,7 @@
 /**
  * @file CConfig.h
  * @author Jan Cerny (cernyj87@fit.cvut.cz)
- * @brief Config singleton class to parse, store, and provide config values to other parts of the program
+ * @brief Header file for CConfig
  *
  */
 
@@ -15,6 +15,10 @@
 
 using std::string, std::map;
 
+/**
+ * @brief Config singleton class to parse, store, and provide config values to other parts of the program
+ *
+ */
 class CConfig
 {
 public:
@@ -22,10 +26,10 @@ public:
      * @brief Struct holding the set values
      *
      */
-    struct Setting
+    struct TSetting
     {
-        Setting();
-        Setting(const string &value);
+        TSetting();
+        TSetting(const string &value);
 
         string m_Value;
 
@@ -35,9 +39,9 @@ public:
         operator string() const;
 
         // Operators to convert various inputs to uniform type (string) when setting the values
-        Setting &operator=(bool);
-        Setting &operator=(int);
-        Setting &operator=(const string &);
+        TSetting &operator=(bool);
+        TSetting &operator=(int);
+        TSetting &operator=(const string &);
     };
 
     /**
@@ -47,7 +51,7 @@ public:
     CConfig();
 
     /**
-     * @brief Parse the CLI arguments and save to Setting values
+     * @brief Parse the CLI arguments and save to TSetting values
      *
      * @param argc Args Count
      * @param argv Args Values
@@ -57,14 +61,13 @@ public:
     bool parseArgs(int argc, char const *argv[]);
 
     /**
-     * @brief Operator [] to return the correct Setting based on it's name
+     * @brief Operator [] to return the correct TSetting based on it's name
      *
-     * @return CConfig::Setting&
+     * @return CConfig::TSetting&
      */
-    Setting &
-    operator[](const string &);
+    TSetting &operator[](const string &);
 
-    // Singleton stuff
+    // Singleton stuff:
 
     /**
      * @brief Get the singleton instance of CConfig
@@ -73,13 +76,20 @@ public:
      */
     static CConfig &getInstance();
 
-    // Disable copy constructor and operator= because of CConfig being singleton
-
+    /**
+     * @brief Disabled copy constructor because of CConfig being singleton
+     *
+     */
     CConfig(const CConfig &) = delete;
+
+    /**
+     * @brief Disabled operator= because of CConfig being singleton
+     *
+     */
     void operator=(const CConfig &) = delete;
 
 private:
-    map<string, Setting> m_Settings;
+    map<string, TSetting> m_Settings;
 
     /**
      * @brief Prints basic usage and all available arguments
@@ -99,5 +109,15 @@ private:
      */
     string formatOption(size_t paramSize, const string &args, const string &helpText) const;
 
+    /**
+     * @brief Read next argument and set to configName TSetting
+     *
+     * @param configName Name of the TSetting config
+     * @param currentArg Index of current argument
+     * @param argc
+     * @param argv
+     * @return true If succesfully set
+     * @return false If error - can't read next argument
+     */
     bool setWithNext(const string &configName, int &currentArg, int argc, const char *argv[]);
 };

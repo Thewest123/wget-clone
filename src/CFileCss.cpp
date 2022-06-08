@@ -30,7 +30,7 @@ bool CFileCss::download()
     if (!CFile::download())
         return false;
 
-    CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Downloading CSS: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
+    CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Downloading CSS: " + m_Url.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
 
     prepareRootUrls();
 
@@ -152,7 +152,7 @@ set<shared_ptr<CFile>> CFileCss::parseFile()
     }
     catch (std::regex_error &e)
     {
-        CLogger::getInstance().log(CLogger::LogLevel::Error, "Internal error in regex");
+        CLogger::getInstance().log(CLogger::ELogLevel::Error, "Internal error in regex");
     }
 
     for (auto &&i : nextUrls)
@@ -187,7 +187,7 @@ set<shared_ptr<CFile>> CFileCss::parseFile()
             newFile = make_shared<CFile>(m_HttpD, m_Depth, newLink);
 
         nextFiles.insert(newFile);
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
+        CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Next file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth) + ")");
     }
 
     // ----------- External links ---------------
@@ -228,7 +228,7 @@ set<shared_ptr<CFile>> CFileCss::parseFile()
     }
     catch (std::regex_error &e)
     {
-        CLogger::getInstance().log(CLogger::LogLevel::Error, "Internal error in regex");
+        CLogger::getInstance().log(CLogger::ELogLevel::Error, "Internal error in regex");
     }
 
     for (auto &&i : nextUrlsExternal)
@@ -245,7 +245,7 @@ set<shared_ptr<CFile>> CFileCss::parseFile()
 
         if (!domainsList.empty() && !Utils::contains(domainsList, newLink.getDomain()))
         {
-            CLogger::getInstance().log(CLogger::LogLevel::Info, "Skipping link due to limit: " + newLink.getNormURL());
+            CLogger::getInstance().log(CLogger::ELogLevel::Info, "Skipping link due to limit: " + newLink.getNormURL());
             continue;
         }
 
@@ -259,7 +259,7 @@ set<shared_ptr<CFile>> CFileCss::parseFile()
             newFile = make_shared<CFile>(m_HttpD, m_Depth + 1, newLink);
 
         nextFiles.insert(newFile);
-        CLogger::getInstance().log(CLogger::LogLevel::Verbose, "Next EXTERNAL file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth + 1) + ")");
+        CLogger::getInstance().log(CLogger::ELogLevel::Verbose, "Next EXTERNAL file: " + newLink.getNormURL() + " | (depth " + std::to_string(m_Depth + 1) + ")");
 
         if (static_cast<int>(m_Depth) + 1 <= static_cast<int>(CConfig::getInstance()["depth"]))
             replaceExternalWithLocal(i, newLink);
