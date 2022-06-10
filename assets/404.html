@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Too Deep</title>
+    <style>
+        main {
+            height: 100vh;
+            width: 100vw;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: "Merriweather Sans", sans-serif;
+        }
+        #errorText {
+            font-size: 22px;
+            margin: 14px 0;
+        }
+        #errorLink {
+            font-size: 20px;
+            padding: 12px;
+            border: 1px solid;
+            color: #000;
+            background-color: transparent;
+            text-decoration: none;
+            transition: all 0.2s ease-in-out;
+        }
+        #errorLink:hover, #errorLink:active {
+            color: #fff;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <main>
+    <h1>404 Too Deep</h2>
+    <p id="errorText">To download this page, you need to increase the --depth parameter!</p>
+    <a id="errorLink" href="javascript:history.back()">Go Back</a>
+</main>
+</main>  
+</body>
+</html>
+
+
+
